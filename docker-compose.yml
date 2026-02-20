@@ -13,11 +13,6 @@ services:
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3308:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdirtroot"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   backend:
     build: ./backend
@@ -31,8 +26,7 @@ services:
       DB_PASSWORD: dirtpass
       PORT: 3001
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
 
   frontend:
     build: ./frontend
@@ -45,6 +39,7 @@ services:
     depends_on:
       - backend
 
+
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: dirt_phpmyadmin
@@ -56,6 +51,5 @@ services:
     ports:
       - "7002:80"
     depends_on:
-      mysql:
-        condition: service_healthy
+      - mysql
 
