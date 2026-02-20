@@ -219,7 +219,7 @@ function PlayerPicker(props) {
               <div key={p.id + "-" + i} className="player-chip selected">
                 <span style={{ fontFamily:"DM Mono", fontSize:"0.7rem", color:"var(--text-muted)" }}>{i + 1}.</span>
                 <span>{p.name}</span>
-                <span className="player-chip-remove" onClick={function() { remove(i); }}>×</span>
+                <span className="player-chip-remove" onClick={function() { remove(i); }}>&times;</span>
               </div>
             );
           })}
