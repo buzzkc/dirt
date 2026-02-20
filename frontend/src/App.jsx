@@ -33,8 +33,8 @@ function parseRoute(hash) {
 }
 
 // ─── Emoji helpers ────────────────────────────────────────────────────────────
-var EMOJI_HAPPY = "\uD83D\uDE0A";  // 😊
-var EMOJI_SAD   = "\uD83D\uDE41";  // 🙁
+var EMOJI_HAPPY = "😊";  // 😊
+var EMOJI_SAD   = "🙁";  // 🙁
 
 function RoundEmoji(props) {
   if (!props.emoji) return null;
@@ -70,8 +70,8 @@ function TallyBar(props) {
   var isUnder = filled && !isOk && total < cards;
   var cls = "neutral"; var msg = "Enter all bids and hands won";
   if (isOk) { cls = "ok"; msg = "Hands check out!"; }
-  else if (isOver) { cls = "warn"; msg = (total - cards) + " too many \u2014 total must equal " + cards; }
-  else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short \u2014 total must equal " + cards; }
+  else if (isOver) { cls = "warn"; msg = (total - cards) + " too many — total must equal " + cards; }
+  else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short — total must equal " + cards; }
   return <div className={"tally-bar " + cls}><span>{msg}</span><span className="tally-num">{total} / {cards} hands</span></div>;
 }
 
@@ -87,7 +87,7 @@ function PlayerEntryRow(props) {
     <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "")}>
       <div>
         <div className="player-name">{name}</div>
-        <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " \u2014 Bid: " + bid : "")}</div>
+        <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
         <div style={{ display:"flex", gap:8, marginTop:8 }}>
           <div className="form-group" style={{ marginBottom:0, flex:1 }}>
             <label>Bid</label>
@@ -99,7 +99,7 @@ function PlayerEntryRow(props) {
       <div className="checkbox-wrap">
         <span className="checkbox-label">Got Bid</span>
         <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
-          onClick={function() { onChange(pi, "gotBid", !e.gotBid); }}>{e.gotBid ? "\u2713" : ""}</div>
+          onClick={function() { onChange(pi, "gotBid", !e.gotBid); }}>{e.gotBid ? "✓" : ""}</div>
       </div>
       <div className="hands-wrap">
         <span className="checkbox-label">Hands</span>
@@ -149,7 +149,7 @@ function ScoreTable(props) {
             {finalTotals.map(function(t, pi) {
               var isWinner = isFinal && t === maxFinal;
               return <td key={pi} style={{ color: isWinner ? "var(--gold)" : isFinal ? "var(--text-subheading)" : "var(--gold)" }}>
-                {isWinner ? t + " \u2605" : t}
+                {isWinner ? t + " ★" : t}
               </td>;
             })}
           </tr>
@@ -219,7 +219,7 @@ function PlayerPicker(props) {
               <div key={p.id + "-" + i} className="player-chip selected">
                 <span style={{ fontFamily:"DM Mono", fontSize:"0.7rem", color:"var(--text-muted)" }}>{i + 1}.</span>
                 <span>{p.name}</span>
-                <span className="player-chip-remove" onClick={function() { remove(i); }}>\u00d7</span>
+                <span className="player-chip-remove" onClick={function() { remove(i); }}>×</span>
               </div>
             );
           })}
@@ -461,7 +461,7 @@ function ActiveGame(props) {
         <div className="modal-overlay" onClick={function(ev) { if (ev.target === ev.currentTarget) setEditingRound(null); }}>
           <div className="modal-box">
             <div className="modal-title">{"Edit Round " + (editingRound.roundIdx + 1)}</div>
-            <div className="modal-subtitle">{cardsForRound(numRounds, editingRound.roundIdx) + " cards \u2014 correct mistakes below"}</div>
+            <div className="modal-subtitle">{cardsForRound(numRounds, editingRound.roundIdx) + " cards — correct mistakes below"}</div>
             {apiError && <div className="error-bar">{apiError}</div>}
             {editingRound.entries.map(function(entry, pi) {
               return <PlayerEntryRow key={pi} entry={entry} pi={pi} numRounds={numRounds} roundIdx={editingRound.roundIdx}
@@ -496,10 +496,10 @@ function SummaryPage(props) {
     <>
       {url && <PermalinkBar url={url} />}
       <div className="winner-banner">
-        <span className="trophy" role="img" aria-label="trophy">\uD83C\uDFC6</span>
+        <span className="trophy" role="img" aria-label="trophy">🏆</span>
         <h2>{winnerName}</h2>
         <p>{"Wins with " + maxFinal + " points!"}</p>
-        <p style={{ fontSize:"0.8rem", marginTop:8 }}>{game.title + " \u2014 " + fmtDate(game.started_at)}</p>
+        <p style={{ fontSize:"0.8rem", marginTop:8 }}>{game.title + " — " + fmtDate(game.started_at)}</p>
         <EmojiStatsBar smiles={smiles} frowns={frowns} />
       </div>
       <div className="card">
@@ -538,7 +538,7 @@ function GameDetailPage(props) {
       <button className="page-back" onClick={function() { navigate("/"); }}>Back to Home</button>
       <PermalinkBar url={permalink("games", props.slug)} />
       <div className="winner-banner" style={{ borderColor: game.status === "completed" ? "var(--winner-border)" : "var(--border)" }}>
-        <span className="trophy" role="img" aria-label={game.status === "completed" ? "trophy" : "cards"}>{game.status === "completed" ? "\uD83C\uDFC6" : "\uD83C\uDCCF"}</span>
+        <span className="trophy" role="img" aria-label={game.status === "completed" ? "trophy" : "cards"}>{game.status === "completed" ? "🏆" : "🃏"}</span>
         <h2>{game.status === "completed" ? winnerName : game.title}</h2>
         <p>{game.status === "completed" ? (winnerName + " wins with " + maxFinal + " pts!") : "In progress"}</p>
         <p style={{ fontSize:"0.8rem", marginTop:8 }}>{fmtDate(game.started_at)}</p>
@@ -720,8 +720,8 @@ function PlayerDetailPage(props) {
                   <div key={g.id} className="game-item">
                     <div style={{ flex:1 }}>
                       <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
-                      <div className="game-item-meta">{fmtDate(g.started_at) + " \u2014 " + g.my_score + " pts"}</div>
-                      <span className={"badge " + (g.won ? "badge-progress" : "badge-done")} style={{ marginTop:4, display:"inline-block" }}>{g.won ? "\uD83C\uDFC6 Won" : "Lost"}</span>
+                      <div className="game-item-meta">{fmtDate(g.started_at) + " — " + g.my_score + " pts"}</div>
+                      <span className={"badge " + (g.won ? "badge-progress" : "badge-done")} style={{ marginTop:4, display:"inline-block" }}>{g.won ? "🏆 Won" : "Lost"}</span>
                     </div>
                     <button className="btn btn-secondary btn-sm" onClick={function() { navigate("/games/" + g.slug); }}>View</button>
                   </div>
@@ -861,7 +861,7 @@ function HomePage(props) {
                   <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
-                      <div className="game-item-meta">{fmtDate(g.started_at) + " \u2014 " + pn.join(", ")}</div>
+                      <div className="game-item-meta">{fmtDate(g.started_at) + " — " + pn.join(", ")}</div>
                       <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                         <span className={"badge " + (g.status === "completed" ? "badge-done" : "badge-progress")}>{g.status === "completed" ? "Completed" : "In Progress"}</span>
                         <span className="badge" style={{ background:"var(--bg-inset)", border:"1px solid var(--border)", color:"var(--text-muted)" }}>{g.num_rounds + " rounds"}</span>
@@ -927,7 +927,7 @@ function PasscodeGate(props) {
         <div className="header">
           <div className="header-nav">
             <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
-              {theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+              {theme === "dark" ? "☀️" : "🌙"}
             </button>
           </div>
           <h1>DIRT</h1>
@@ -1041,7 +1041,7 @@ export default function App() {
             <button className={"nav-icon-btn" + (route.page === "players" ? " active" : "")} onClick={function() { navigate("/players"); }}>Players</button>
             <button className={"nav-icon-btn" + (route.page === "rules" ? " active" : "")} onClick={function() { navigate("/rules"); }}>? Rules</button>
             <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
-              {theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+              {theme === "dark" ? "☀️" : "🌙"}
             </button>
           </div>
           <h1 onClick={function() { navigate("/"); }}>DIRT</h1>
