@@ -1,13 +1,23 @@
 CREATE DATABASE IF NOT EXISTS dirt_scores;
 USE dirt_scores;
 
+CREATE TABLE IF NOT EXISTS players (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS games (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(255) DEFAULT '',
+  title VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) NOT NULL UNIQUE,
   num_players INT NOT NULL,
   num_rounds INT NOT NULL,
   player_names JSON NOT NULL,
-  status ENUM('in_progress', 'completed') DEFAULT 'in_progress',
+  player_ids JSON NOT NULL DEFAULT ('[]'),
+  status ENUM('in_progress','completed') DEFAULT 'in_progress',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
