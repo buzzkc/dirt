@@ -11,8 +11,6 @@ services:
     volumes:
       - /home/darren/dockerdata/dirt/mysql:/var/lib/mysql
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3308:3306"
 
   backend:
     build: ./backend
@@ -20,7 +18,7 @@ services:
     restart: unless-stopped
     environment:
       DB_HOST: mysql
-      DB_PORT: 3308
+      DB_PORT: 3306
       DB_NAME: dirt_scores
       DB_USER: dirt
       DB_PASSWORD: dirtpass
@@ -46,7 +44,7 @@ services:
     restart: unless-stopped
     environment:
       PMA_HOST: mysql
-      PMA_PORT: 3308
+      PMA_PORT: 3306
       MYSQL_ROOT_PASSWORD: dirtroot
     ports:
       - "7002:80"
