@@ -1,0 +1,27 @@
+CREATE DATABASE IF NOT EXISTS dirt_scores;
+USE dirt_scores;
+
+CREATE TABLE IF NOT EXISTS games (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) DEFAULT '',
+  num_players INT NOT NULL,
+  num_rounds INT NOT NULL,
+  player_names JSON NOT NULL,
+  status ENUM('in_progress', 'completed') DEFAULT 'in_progress',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rounds (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  game_id INT NOT NULL,
+  round_index INT NOT NULL,
+  cards_dealt INT NOT NULL,
+  entries JSON NOT NULL,
+  scores JSON NOT NULL,
+  emoji VARCHAR(10) DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_game_round (game_id, round_index)
+);

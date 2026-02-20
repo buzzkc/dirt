@@ -1,0 +1,59 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dirt_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: dirtroot
+      MYSQL_DATABASE: dirt_scores
+      MYSQL_USER: dirt
+      MYSQL_PASSWORD: dirtpass
+    volumes:
+      - /home/darren/dockerdata/dirt/mysql:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdirtroot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: dirt_backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: dirt_scores
+      DB_USER: dirt
+      DB_PASSWORD: dirtpass
+      PORT: 3001
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: dirt_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:7001/api
+    ports:
+      - "7001:80"
+    depends_on:
+      - backend
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: dirt_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: dirtroot
+    ports:
+      - "7002:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
