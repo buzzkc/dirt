@@ -4,12 +4,12 @@ services:
     container_name: dirt_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: dirtroot
-      MYSQL_DATABASE: dirt_scores
-      MYSQL_USER: dirt
-      MYSQL_PASSWORD: dirtpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - /home/darren/dockerdata/dirt/mysql:/var/lib/mysql
+      - ./mysql:/var/lib/mysql
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   backend:
@@ -19,10 +19,11 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: dirt_scores
-      DB_USER: dirt
-      DB_PASSWORD: dirtpass
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
       PORT: 3001
+      APP_PASSCODE: ${APP_PASSCODE}
     depends_on:
       - mysql
 
@@ -30,13 +31,10 @@ services:
     build: ./frontend
     container_name: dirt_frontend
     restart: unless-stopped
-    environment:
-      VITE_API_URL: http://localhost:7001/api
     ports:
       - "7001:80"
     depends_on:
       - backend
-
 
   phpmyadmin:
     image: phpmyadmin:latest
@@ -45,7 +43,7 @@ services:
     environment:
       PMA_HOST: mysql
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: dirtroot
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "7002:80"
     depends_on:

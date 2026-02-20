@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { STYLES } from "./styles.js";
-import { apiFetch, calcScore, maxRoundsForPlayers, cardsForRound, handsTotal, allFilled, isValidRound, buildRound, incrementTitle, fmtDate, permalink } from "./api.js";
+import {
+  apiFetch, calcScore, maxRoundsForPlayers, cardsForRound,
+  handsTotal, allFilled, isValidRound, buildRound,
+  incrementTitle, fmtDate, permalink,
+  getSavedPasscodeHash, savePasscodeHash
+} from "./api.js";
 
-// ─── Hash Router ──────────────────────────────────────────────────────────────
+// ─── Router ───────────────────────────────────────────────────────────────────
 function useHash() {
   var [hash, setHash] = useState(window.location.hash || "#/");
   useEffect(function() {
@@ -27,13 +32,25 @@ function parseRoute(hash) {
   return { page: "home" };
 }
 
+// ─── Emoji helpers ────────────────────────────────────────────────────────────
+var EMOJI_HAPPY = "\uD83D\uDE0A";  // 😊
+var EMOJI_SAD   = "\uD83D\uDE41";  // 🙁
+
+function RoundEmoji(props) {
+  if (!props.emoji) return null;
+  var em = props.emoji === "happy" ? EMOJI_HAPPY : EMOJI_SAD;
+  var title = props.emoji === "happy" ? "Everyone made their bid!" : "Nobody made their bid";
+  return (
+    <span className="round-emoji" title={title} role="img" aria-label={title}>{em}</span>
+  );
+}
+
 // ─── Shared UI ────────────────────────────────────────────────────────────────
 function PermalinkBar(props) {
   var [copied, setCopied] = useState(false);
   function copy() {
     navigator.clipboard.writeText(props.url).then(function() {
-      setCopied(true);
-      setTimeout(function() { setCopied(false); }, 2000);
+      setCopied(true); setTimeout(function() { setCopied(false); }, 2000);
     });
   }
   return (
@@ -53,8 +70,8 @@ function TallyBar(props) {
   var isUnder = filled && !isOk && total < cards;
   var cls = "neutral"; var msg = "Enter all bids and hands won";
   if (isOk) { cls = "ok"; msg = "Hands check out!"; }
-  else if (isOver) { cls = "warn"; msg = (total - cards) + " too many - total must equal " + cards; }
-  else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short - total must equal " + cards; }
+  else if (isOver) { cls = "warn"; msg = (total - cards) + " too many \u2014 total must equal " + cards; }
+  else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short \u2014 total must equal " + cards; }
   return <div className={"tally-bar " + cls}><span>{msg}</span><span className="tally-num">{total} / {cards} hands</span></div>;
 }
 
@@ -70,7 +87,7 @@ function PlayerEntryRow(props) {
     <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "")}>
       <div>
         <div className="player-name">{name}</div>
-        <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " - Bid: " + bid : "")}</div>
+        <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " \u2014 Bid: " + bid : "")}</div>
         <div style={{ display:"flex", gap:8, marginTop:8 }}>
           <div className="form-group" style={{ marginBottom:0, flex:1 }}>
             <label>Bid</label>
@@ -81,7 +98,8 @@ function PlayerEntryRow(props) {
       </div>
       <div className="checkbox-wrap">
         <span className="checkbox-label">Got Bid</span>
-        <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")} onClick={function() { onChange(pi, "gotBid", !e.gotBid); }}>{e.gotBid ? "V" : ""}</div>
+        <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
+          onClick={function() { onChange(pi, "gotBid", !e.gotBid); }}>{e.gotBid ? "\u2713" : ""}</div>
       </div>
       <div className="hands-wrap">
         <span className="checkbox-label">Hands</span>
@@ -110,18 +128,17 @@ function ScoreTable(props) {
         </tr></thead>
         <tbody>
           {rounds.map(function(r, ri) {
-            var el = r.emoji === "happy" ? ":-)" : r.emoji === "sad" ? ":-(" : "";
             return (
               <tr key={ri}>
                 <td>
                   <div className="round-label">{"R" + (ri + 1)}</div>
-                  {el && <div className="round-emoji">{el}</div>}
+                  <RoundEmoji emoji={r.emoji} />
                   {onEdit && <button className="btn-edit" onClick={function() { onEdit(ri); }}>edit</button>}
                 </td>
                 {r.scores.map(function(s, pi) {
                   return <td key={pi}>
-                    <div style={{ color:"#e8dfc8" }}>{s}</div>
-                    <div style={{ fontSize:"0.68rem", color:"#7aad8a" }}>{"= " + (totalUpTo(pi, ri) + s)}</div>
+                    <div style={{ color:"var(--text-primary)" }}>{s}</div>
+                    <div style={{ fontSize:"0.68rem", color:"var(--text-secondary)" }}>{"= " + (totalUpTo(pi, ri) + s)}</div>
                   </td>;
                 })}
               </tr>
@@ -130,13 +147,27 @@ function ScoreTable(props) {
           <tr className="total-row">
             <td>{isFinal ? "Final" : "Total"}</td>
             {finalTotals.map(function(t, pi) {
-              return <td key={pi} style={{ color: isFinal && t === maxFinal ? "#f0c040" : isFinal ? "#c8b878" : "#f0c040" }}>
-                {isFinal && t === maxFinal ? t + " *" : t}
+              var isWinner = isFinal && t === maxFinal;
+              return <td key={pi} style={{ color: isWinner ? "var(--gold)" : isFinal ? "var(--text-subheading)" : "var(--gold)" }}>
+                {isWinner ? t + " \u2605" : t}
               </td>;
             })}
           </tr>
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// ─── Game Emoji Stats Bar ─────────────────────────────────────────────────────
+function EmojiStatsBar(props) {
+  var smiles = props.smiles || 0;
+  var frowns = props.frowns || 0;
+  if (smiles === 0 && frowns === 0) return null;
+  return (
+    <div className="emoji-stats-bar">
+      {smiles > 0 && <span className="emoji-stat"><span role="img" aria-label="everyone made bid">{EMOJI_HAPPY}</span> <span className="emoji-stat-count">x{smiles}</span></span>}
+      {frowns > 0 && <span className="emoji-stat"><span role="img" aria-label="nobody made bid">{EMOJI_SAD}</span> <span className="emoji-stat-count">x{frowns}</span></span>}
     </div>
   );
 }
@@ -159,7 +190,7 @@ function PlayerPicker(props) {
 
   function addExisting(player) {
     if (selected.length >= maxPlayers) return;
-    onChange(selected.concat([{ id: player.id, name: player.name }]));
+    onChange(selected.concat([{ id: player.id, name: player.name, slug: player.slug }]));
     setSearch("");
   }
 
@@ -172,7 +203,7 @@ function PlayerPicker(props) {
     try {
       var player = await apiFetch("/players", { method: "POST", body: JSON.stringify({ name: name }) });
       setAllPlayers(function(prev) { return prev.concat([player]).sort(function(a, b) { return a.name.localeCompare(b.name); }); });
-      onChange(selected.concat([{ id: player.id, name: player.name }]));
+      onChange(selected.concat([{ id: player.id, name: player.name, slug: player.slug }]));
       setNewName("");
     } catch (e) { setErr(e.message); }
     finally { setAdding(false); }
@@ -180,15 +211,15 @@ function PlayerPicker(props) {
 
   return (
     <div className="player-picker">
-      <label>Players <span className="required-star">*</span> <span style={{ color:"#5a8a6a", fontWeight:400 }}>({selected.length}/{maxPlayers} selected)</span></label>
+      <label>Players <span className="required-star">*</span> <span style={{ color:"var(--text-muted)", fontWeight:400 }}>({selected.length}/{maxPlayers})</span></label>
       {selected.length > 0 && (
         <div className="player-picker-list">
           {selected.map(function(p, i) {
             return (
               <div key={p.id + "-" + i} className="player-chip selected">
-                <span style={{ fontFamily:"DM Mono", fontSize:"0.7rem", color:"#5a8a6a" }}>{i + 1}.</span>
+                <span style={{ fontFamily:"DM Mono", fontSize:"0.7rem", color:"var(--text-muted)" }}>{i + 1}.</span>
                 <span>{p.name}</span>
-                <span className="player-chip-remove" onClick={function() { remove(i); }}>x</span>
+                <span className="player-chip-remove" onClick={function() { remove(i); }}>\u00d7</span>
               </div>
             );
           })}
@@ -210,22 +241,22 @@ function PlayerPicker(props) {
                 </div>
               )}
               {search.length > 0 && filtered.length === 0 && (
-                <div style={{ fontSize:"0.75rem", color:"#5a8a6a", fontFamily:"DM Mono", marginBottom:8 }}>No matches. Create below.</div>
+                <div style={{ fontSize:"0.75rem", color:"var(--text-muted)", fontFamily:"DM Mono", marginBottom:8 }}>No matches. Create below.</div>
               )}
               <hr className="divider" />
             </>
           )}
           <label>Create New Player</label>
+          {err && <div className="error-bar" style={{ marginBottom:8 }}>{err}</div>}
           <div className="player-search">
             <input type="text" placeholder="New player name..." value={newName}
               onChange={function(e) { setNewName(e.target.value); }}
               onKeyDown={function(e) { if (e.key === "Enter") createAndAdd(); }} />
             <button className="btn btn-secondary btn-sm" onClick={createAndAdd} disabled={adding || !newName.trim()}>{adding ? "..." : "Add"}</button>
           </div>
-          {err && <div className="field-error">{err}</div>}
+          <div className="player-order-hint">Players are seated in the order selected above.</div>
         </>
       )}
-      {selected.length >= 2 && <div className="player-order-hint">Order determines seating position. Remove and re-add to reorder.</div>}
     </div>
   );
 }
@@ -242,7 +273,7 @@ function NewGameForm(props) {
   var [apiError, setApiError] = useState(null);
 
   var numPlayers = selectedPlayers.length;
-  var maxRounds = numPlayers >= 2 ? maxRoundsForPlayers(numPlayers) : 52;
+  var maxRounds = numPlayers >= 2 ? maxRoundsForPlayers(numPlayers) : 26;
   var clampedRounds = Math.min(numRounds, maxRounds);
 
   useEffect(function() {
@@ -300,7 +331,7 @@ function NewGameForm(props) {
       </div>
       {numPlayers >= 2 && (
         <div className="form-group">
-          <label>Rounds <span style={{ color:"#5a8a6a", fontWeight:400 }}>(max {maxRounds} for {numPlayers} players)</span></label>
+          <label>Rounds <span style={{ color:"var(--text-muted)", fontWeight:400 }}>(max {maxRounds} for {numPlayers} players)</span></label>
           <select value={clampedRounds} onChange={function(e) { setNumRounds(Number(e.target.value)); }}>
             {roundOptions.map(function(n) { return <option key={n} value={n}>{n}{n === maxRounds ? " (max)" : ""}</option>; })}
           </select>
@@ -322,7 +353,6 @@ function ActiveGame(props) {
   var game = props.game; var players = props.players;
   var initialRounds = props.initialRounds || [];
   var onFinish = props.onFinish; var onReset = props.onReset;
-
   var numRounds = game.num_rounds;
   var [rounds, setRounds] = useState(initialRounds);
   var [roundEntry, setRoundEntry] = useState(function() {
@@ -346,7 +376,6 @@ function ActiveGame(props) {
 
   function updateEntry(pi, f, v) { setRoundEntry(function(p) { return Object.assign({}, p, { entries: applyChange(p.entries, pi, f, v) }); }); }
   function updateEdit(pi, f, v) { setEditingRound(function(p) { return Object.assign({}, p, { entries: applyChange(p.entries, pi, f, v) }); }); }
-
   function totalUpTo(pi, ri) { return rounds.slice(0, ri).reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); }
 
   async function submitRound() {
@@ -354,7 +383,9 @@ function ActiveGame(props) {
     var nr = buildRound(roundEntry.roundIdx, roundEntry.entries);
     try {
       setSaving(true);
-      await apiFetch("/games/" + game.id + "/rounds/" + roundEntry.roundIdx, { method:"PUT", body:JSON.stringify({ entries:nr.entries, scores:nr.scores, emoji:nr.emoji, cards_dealt:cardsForRound(numRounds, roundEntry.roundIdx) }) });
+      await apiFetch("/games/" + game.id + "/rounds/" + roundEntry.roundIdx, {
+        method:"PUT", body:JSON.stringify({ entries:nr.entries, scores:nr.scores, emoji:nr.emoji, cards_dealt:cardsForRound(numRounds, roundEntry.roundIdx) })
+      });
       var newRounds = rounds.concat([nr]);
       var isLast = roundEntry.roundIdx + 1 >= numRounds;
       if (isLast) {
@@ -375,12 +406,17 @@ function ActiveGame(props) {
     var updated = buildRound(ri, editingRound.entries);
     try {
       setSaving(true);
-      await apiFetch("/games/" + game.id + "/rounds/" + ri, { method:"PUT", body:JSON.stringify({ entries:updated.entries, scores:updated.scores, emoji:updated.emoji, cards_dealt:cardsForRound(numRounds, ri) }) });
+      await apiFetch("/games/" + game.id + "/rounds/" + ri, {
+        method:"PUT", body:JSON.stringify({ entries:updated.entries, scores:updated.scores, emoji:updated.emoji, cards_dealt:cardsForRound(numRounds, ri) })
+      });
       setRounds(function(prev) { return prev.map(function(r, idx) { return idx === ri ? updated : r; }); });
       setEditingRound(null);
     } catch (e) { setApiError(e.message); }
     finally { setSaving(false); }
   }
+
+  var smiles = rounds.filter(function(r) { return r.emoji === "happy"; }).length;
+  var frowns = rounds.filter(function(r) { return r.emoji === "sad"; }).length;
 
   return (
     <>
@@ -390,6 +426,7 @@ function ActiveGame(props) {
       {rounds.length > 0 && (
         <div className="card">
           <h2>{game.title}</h2>
+          <EmojiStatsBar smiles={smiles} frowns={frowns} />
           <ScoreTable rounds={rounds} players={players} isFinal={false}
             onEdit={function(ri) { setEditingRound({ roundIdx:ri, entries: rounds[ri].entries.map(function(e) { return Object.assign({}, e); }) }); }} />
         </div>
@@ -401,7 +438,7 @@ function ActiveGame(props) {
             <div className="round-badge">{"Round " + (roundEntry.roundIdx + 1)}</div>
             <div className="cards-badge">{cardsForRound(numRounds, roundEntry.roundIdx) + " cards each"}</div>
           </div>
-          <div style={{ fontFamily:"DM Mono", fontSize:"0.72rem", color:"#5a8a6a" }}>{(roundEntry.roundIdx + 1) + " / " + numRounds}</div>
+          <div style={{ fontFamily:"DM Mono", fontSize:"0.72rem", color:"var(--text-muted)" }}>{(roundEntry.roundIdx + 1) + " / " + numRounds}</div>
         </div>
         <div style={{ marginBottom:16 }}>
           {roundEntry.entries.map(function(entry, pi) {
@@ -424,7 +461,7 @@ function ActiveGame(props) {
         <div className="modal-overlay" onClick={function(ev) { if (ev.target === ev.currentTarget) setEditingRound(null); }}>
           <div className="modal-box">
             <div className="modal-title">{"Edit Round " + (editingRound.roundIdx + 1)}</div>
-            <div className="modal-subtitle">{cardsForRound(numRounds, editingRound.roundIdx) + " cards - correct mistakes below"}</div>
+            <div className="modal-subtitle">{cardsForRound(numRounds, editingRound.roundIdx) + " cards \u2014 correct mistakes below"}</div>
             {apiError && <div className="error-bar">{apiError}</div>}
             {editingRound.entries.map(function(entry, pi) {
               return <PlayerEntryRow key={pi} entry={entry} pi={pi} numRounds={numRounds} roundIdx={editingRound.roundIdx}
@@ -453,14 +490,17 @@ function SummaryPage(props) {
   var maxFinal = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
   var winnerName = players[finalTotals.indexOf(maxFinal)] || "";
   var url = game.slug ? permalink("games", game.slug) : "";
+  var smiles = rounds.filter(function(r) { return r.emoji === "happy"; }).length;
+  var frowns = rounds.filter(function(r) { return r.emoji === "sad"; }).length;
   return (
     <>
       {url && <PermalinkBar url={url} />}
       <div className="winner-banner">
-        <span className="trophy">&#127942;</span>
+        <span className="trophy" role="img" aria-label="trophy">\uD83C\uDFC6</span>
         <h2>{winnerName}</h2>
         <p>{"Wins with " + maxFinal + " points!"}</p>
-        <p style={{ fontSize:"0.8rem", marginTop:8 }}>{game.title + " - " + fmtDate(game.started_at)}</p>
+        <p style={{ fontSize:"0.8rem", marginTop:8 }}>{game.title + " \u2014 " + fmtDate(game.started_at)}</p>
+        <EmojiStatsBar smiles={smiles} frowns={frowns} />
       </div>
       <div className="card">
         <h2>Final Scorecard</h2>
@@ -474,42 +514,47 @@ function SummaryPage(props) {
   );
 }
 
-// ─── Game Detail (Permalink Page) ────────────────────────────────────────────
+// ─── Game Detail Page ─────────────────────────────────────────────────────────
 function GameDetailPage(props) {
   var [game, setGame] = useState(null); var [loading, setLoading] = useState(true); var [err, setErr] = useState(null);
   useEffect(function() {
     setLoading(true);
     apiFetch("/games/" + props.slug).then(function(g) { setGame(g); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); });
   }, [props.slug]);
-  if (loading) return <div className="card"><p style={{ color:"#7aad8a", fontFamily:"DM Mono" }}>Loading...</p></div>;
+  if (loading) return <div className="card"><p style={{ color:"var(--text-secondary)", fontFamily:"DM Mono" }}>Loading...</p></div>;
   if (err) return <div className="card"><div className="error-bar">{err}</div></div>;
   if (!game) return null;
   var players = game.player_names || [];
   var pIds = game.player_ids || [];
+  var pSlugs = game.player_slugs || [];
   var rounds = (game.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
   var finalTotals = players.map(function(_, pi) { return rounds.reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); });
   var maxFinal = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
   var winnerName = players[finalTotals.indexOf(maxFinal)] || "";
+  var smiles = game.smiles || 0;
+  var frowns = game.frowns || 0;
   return (
     <>
       <button className="page-back" onClick={function() { navigate("/"); }}>Back to Home</button>
       <PermalinkBar url={permalink("games", props.slug)} />
-      <div className="winner-banner" style={{ borderColor: game.status === "completed" ? "#f0c040" : "#2d5238" }}>
-        <span className="trophy">{game.status === "completed" ? "\u{1F3C6}" : "\u{1F0CF}"}</span>
+      <div className="winner-banner" style={{ borderColor: game.status === "completed" ? "var(--winner-border)" : "var(--border)" }}>
+        <span className="trophy" role="img" aria-label={game.status === "completed" ? "trophy" : "cards"}>{game.status === "completed" ? "\uD83C\uDFC6" : "\uD83C\uDCCF"}</span>
         <h2>{game.status === "completed" ? winnerName : game.title}</h2>
         <p>{game.status === "completed" ? (winnerName + " wins with " + maxFinal + " pts!") : "In progress"}</p>
         <p style={{ fontSize:"0.8rem", marginTop:8 }}>{fmtDate(game.started_at)}</p>
+        <EmojiStatsBar smiles={smiles} frowns={frowns} />
       </div>
       <div className="card">
         <h2>{game.title}</h2>
-        {pIds.length > 0 && (
+        {players.length > 0 && (
           <div style={{ marginBottom:16, display:"flex", flexWrap:"wrap", gap:6 }}>
             {players.map(function(name, i) {
               var pid = pIds[i];
+              var pslug = pSlugs[i] || (pid ? String(pid) : null);
               return (
                 <div key={i} className="player-chip">
-                  {pid
-                    ? <button className="btn-link" onClick={function() { navigate("/players/" + pid); }}>{name}</button>
+                  {pslug
+                    ? <button className="btn-link" onClick={function() { navigate("/players/" + pslug); }}>{name}</button>
                     : <span>{name}</span>}
                 </div>
               );
@@ -529,7 +574,14 @@ function PlayersPage() {
   var [editId, setEditId] = useState(null); var [editName, setEditName] = useState("");
   var [err, setErr] = useState(null);
 
-  function load() { setLoading(true); apiFetch("/players").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); }); }
+  function load() {
+    setLoading(true);
+    // Use players-stats endpoint to get stats inline
+    apiFetch("/players-stats").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e) {
+      // Fallback to basic players list
+      apiFetch("/players").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e2) { setErr(e2.message); setLoading(false); });
+    });
+  }
   useEffect(load, []);
 
   async function addPlayer() {
@@ -547,7 +599,7 @@ function PlayersPage() {
     var name = editName.trim(); if (!name) return;
     try {
       var p = await apiFetch("/players/" + id, { method:"PUT", body:JSON.stringify({ name:name }) });
-      setPlayers(function(prev) { return prev.map(function(x) { return x.id === id ? p : x; }).sort(function(a, b) { return a.name.localeCompare(b.name); }); });
+      setPlayers(function(prev) { return prev.map(function(x) { return x.id === id ? Object.assign({}, x, p) : x; }).sort(function(a, b) { return a.name.localeCompare(b.name); }); });
       setEditId(null);
     } catch (e) { setErr(e.message); }
   }
@@ -577,6 +629,7 @@ function PlayersPage() {
         {!loading && players.length === 0 && <div className="empty-state">No players yet.</div>}
         <div className="player-list">
           {players.map(function(p) {
+            var stats = p.stats || null;
             return (
               <div key={p.id} className="player-item">
                 {editId === p.id ? (
@@ -591,7 +644,16 @@ function PlayersPage() {
                   <>
                     <div style={{ flex:1, cursor:"pointer" }} onClick={function() { navigate("/players/" + p.slug); }}>
                       <div className="player-item-name">{p.name}</div>
-                      <div className="player-item-meta">View stats and game history</div>
+                      {stats ? (
+                        <div className="player-item-stats">
+                          <span className="player-stat-chip">{stats.games_played} <span className="player-stat-label">games</span></span>
+                          <span className="player-stat-chip win">{stats.wins} <span className="player-stat-label">wins</span></span>
+                          <span className="player-stat-chip loss">{stats.losses} <span className="player-stat-label">losses</span></span>
+                          <span className="player-stat-chip">{stats.total_points} <span className="player-stat-label">pts</span></span>
+                        </div>
+                      ) : (
+                        <div className="player-item-meta">View stats and game history</div>
+                      )}
                     </div>
                     <div style={{ display:"flex", gap:6 }}>
                       <button className="btn btn-secondary btn-sm" onClick={function() { setEditId(p.id); setEditName(p.name); }}>Rename</button>
@@ -615,7 +677,7 @@ function PlayerDetailPage(props) {
     setLoading(true);
     apiFetch("/players/" + props.slug).then(function(d) { setData(d); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); });
   }, [props.slug]);
-  if (loading) return <div className="card"><p style={{ color:"#7aad8a", fontFamily:"DM Mono" }}>Loading...</p></div>;
+  if (loading) return <div className="card"><p style={{ color:"var(--text-secondary)", fontFamily:"DM Mono" }}>Loading...</p></div>;
   if (err) return <div className="card"><div className="error-bar">{err}</div></div>;
   if (!data) return null;
   var stats = data.stats || {};
@@ -631,36 +693,35 @@ function PlayerDetailPage(props) {
           <div className="stat-box"><div className="stat-value">{stats.losses || 0}</div><div className="stat-label">Losses</div></div>
           <div className="stat-box"><div className="stat-value">{stats.total_points || 0}</div><div className="stat-label">Total Points</div></div>
         </div>
-        {(data.games || []).length > 0 && (
-          <>
-            <h3>Completed Games</h3>
-            <div className="game-list" style={{ marginBottom:16 }}>
-              {(data.games || []).map(function(g) {
-                return (
-                  <div key={g.id} className="game-item">
-                    <div style={{ flex:1 }}>
-                      <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
-                      <div className="game-item-meta">{fmtDate(g.started_at) + " - " + g.my_score + " pts"}</div>
-                      <span className={"badge " + (g.won ? "badge-progress" : "badge-done")} style={{ marginTop:4, display:"inline-block" }}>{g.won ? "Won" : "Lost"}</span>
-                    </div>
-                    <button className="btn btn-secondary btn-sm" onClick={function() { navigate("/games/" + g.slug); }}>View</button>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
         {(data.games_in_progress || []).length > 0 && (
           <>
-            <h3>In Progress</h3>
-            <div className="game-list">
+            <h3 style={{ marginBottom:10 }}>In Progress</h3>
+            <div className="game-list" style={{ marginBottom:16 }}>
               {(data.games_in_progress || []).map(function(g) {
                 return (
                   <div key={g.id} className="game-item">
                     <div style={{ flex:1 }}>
                       <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
                       <div className="game-item-meta">{fmtDate(g.started_at)}</div>
-                      <span className="badge badge-progress" style={{ marginTop:4, display:"inline-block" }}>In Progress</span>
+                    </div>
+                    <span className="badge badge-progress">In Progress</span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {(data.games || []).length > 0 && (
+          <>
+            <h3 style={{ marginBottom:10 }}>Completed Games</h3>
+            <div className="game-list">
+              {(data.games || []).map(function(g) {
+                return (
+                  <div key={g.id} className="game-item">
+                    <div style={{ flex:1 }}>
+                      <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
+                      <div className="game-item-meta">{fmtDate(g.started_at) + " \u2014 " + g.my_score + " pts"}</div>
+                      <span className={"badge " + (g.won ? "badge-progress" : "badge-done")} style={{ marginTop:4, display:"inline-block" }}>{g.won ? "\uD83C\uDFC6 Won" : "Lost"}</span>
                     </div>
                     <button className="btn btn-secondary btn-sm" onClick={function() { navigate("/games/" + g.slug); }}>View</button>
                   </div>
@@ -669,7 +730,9 @@ function PlayerDetailPage(props) {
             </div>
           </>
         )}
-        {!(data.games || []).length && !(data.games_in_progress || []).length && <div className="empty-state">No games played yet.</div>}
+        {(stats.games_played || 0) === 0 && (
+          <div className="empty-state">No completed games yet.</div>
+        )}
       </div>
     </>
   );
@@ -679,40 +742,53 @@ function PlayerDetailPage(props) {
 function RulesPage() {
   return (
     <>
-      <button className="page-back" onClick={function() { navigate("/"); }}>Back</button>
+      <button className="page-back" onClick={function() { navigate("/"); }}>Back to Home</button>
       <div className="card">
         <h2>How to Play Dirt</h2>
         <div className="rules-section">
-          <h3>The Basics</h3>
-          <p>Dirt is a trick-taking card game where players bid on how many tricks they expect to win each round. Hit your bid exactly and earn a 10-point bonus. Miss in either direction and you only get points equal to tricks won.</p>
-          <p>Uses a standard 52-card deck, no jokers. Ace is high. <strong style={{ color:"#e84040" }}>Diamonds is always trump.</strong></p>
+          <h3>Overview</h3>
+          <p>Dirt is a trick-taking card game where players bid the number of tricks they expect to win each round. Points are awarded for accurate prediction.</p>
+        </div>
+        <div className="rules-section">
+          <h3>The Deck &amp; Trump</h3>
+          <p>Standard 52-card deck, Ace high. <strong style={{ color:"var(--trump-red)" }}>Diamonds are always trump.</strong></p>
         </div>
         <div className="rules-section">
           <h3>The Deal</h3>
-          <p>In the first round, each player gets the maximum cards (52 divided by number of players, rounded down). Each subsequent round players receive one fewer card until the final round where everyone gets 1 card. Undealt cards are set aside and not used.</p>
+          <p>The game starts with N cards per player in Round 1 (where N = number of rounds), then N-1, N-2 ... down to 1 card in the final round. Remaining cards are discarded.</p>
         </div>
         <div className="rules-section">
           <h3>Bidding</h3>
-          <p>After the deal, starting left of the dealer and going clockwise, each player bids the number of tricks they think they will win. Bidding zero is allowed if you think you can take no tricks.</p>
+          <p>After the deal, each player bids how many tricks they will win. Bidding starts left of the dealer and goes clockwise. Zero bids are allowed.</p>
         </div>
         <div className="rules-section">
           <h3>Play</h3>
-          <p>The player left of the dealer leads the first trick. Players must follow the led suit if possible. If unable to follow suit, they may play any card including a trump (Diamond). The highest card in the led suit wins unless a Diamond is played, in which case the highest Diamond wins. The trick winner leads the next trick.</p>
+          <ul>
+            <li>The player left of the dealer leads the first trick with any card.</li>
+            <li>Players must follow the led suit if possible.</li>
+            <li>If unable to follow suit, any card including a trump (Diamond) may be played.</li>
+            <li>Highest card in the led suit wins, unless a Diamond is played&mdash;then highest Diamond wins.</li>
+            <li>The trick winner leads the next trick.</li>
+          </ul>
         </div>
         <div className="rules-section">
           <h3>Scoring</h3>
           <ul>
-            <li><strong>Made your bid:</strong> Bid + 10 bonus pts. (bid 3, won 3 = 13 pts)</li>
-            <li><strong>Over your bid:</strong> Tricks won only. (bid 3, won 4 = 4 pts)</li>
-            <li><strong>Under your bid:</strong> Tricks won only. (bid 3, won 2 = 2 pts)</li>
-            <li><strong>Bid zero, took no tricks:</strong> 10 pts.</li>
-            <li><strong>Bid zero, took tricks:</strong> Tricks won only. (bid 0, won 2 = 2 pts)</li>
+            <li><strong>Made your bid:</strong> Bid + 10 pts &nbsp;<em>(bid 3, won 3 = 13 pts)</em></li>
+            <li><strong>Over your bid:</strong> Tricks won only &nbsp;<em>(bid 3, won 4 = 4 pts)</em></li>
+            <li><strong>Under your bid:</strong> Tricks won only &nbsp;<em>(bid 3, won 2 = 2 pts)</em></li>
+            <li><strong>Bid zero, took none:</strong> 10 pts</li>
+            <li><strong>Bid zero, took tricks:</strong> Tricks won only &nbsp;<em>(bid 0, won 2 = 2 pts)</em></li>
           </ul>
-          <p style={{ marginTop:8 }}>The player with the highest total score after all rounds wins.</p>
         </div>
         <div className="rules-section">
           <h3>Round Indicators</h3>
-          <p><strong>:-)</strong> = All players made their bid that round. <strong>:-(</strong> = No players made their bid.</p>
+          <p><span role="img" aria-label="happy">{EMOJI_HAPPY}</span> = Every player made their bid that round.</p>
+          <p><span role="img" aria-label="sad">{EMOJI_SAD}</span> = No player made their bid that round.</p>
+        </div>
+        <div className="rules-section">
+          <h3>Winning</h3>
+          <p>Highest total score after all rounds wins the game.</p>
         </div>
       </div>
     </>
@@ -722,7 +798,7 @@ function RulesPage() {
 // ─── Home Page ────────────────────────────────────────────────────────────────
 function HomePage(props) {
   var onStartGame = props.onStartGame; var prefill = props.prefill; var setPrefill = props.setPrefill;
-  var [tab, setTab] = useState("new");
+  var [tab, setTab] = useState(prefill ? "new" : "new");
   var [history, setHistory] = useState([]);
   var [histLoading, setHistLoading] = useState(false);
   var [apiError, setApiError] = useState(null);
@@ -738,7 +814,8 @@ function HomePage(props) {
       var data = await apiFetch("/games/" + g.id);
       var pNames = Array.isArray(data.player_names) ? data.player_names : [];
       var pIds = Array.isArray(data.player_ids) ? data.player_ids : [];
-      var players = pNames.map(function(n, i) { return { id: pIds[i] || null, name: n }; });
+      var pSlugs = Array.isArray(data.player_slugs) ? data.player_slugs : [];
+      var players = pNames.map(function(n, i) { return { id: pIds[i] || null, name: n, slug: pSlugs[i] || null }; });
       var loaded = (data.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
       onStartGame(data, players, loaded);
     } catch (e) { setApiError(e.message); }
@@ -747,7 +824,8 @@ function HomePage(props) {
   function cloneGame(g) {
     var pn = Array.isArray(g.player_names) ? g.player_names : JSON.parse(g.player_names || "[]");
     var pids = Array.isArray(g.player_ids) ? g.player_ids : JSON.parse(g.player_ids || "[]");
-    var players = pn.map(function(n, i) { return { id: pids[i] || null, name: n }; });
+    var pslugs = Array.isArray(g.player_slugs) ? g.player_slugs : [];
+    var players = pn.map(function(n, i) { return { id: pids[i] || null, name: n, slug: pslugs[i] || null }; });
     setPrefill({ title: incrementTitle(g.title), numRounds: g.num_rounds, players: players });
     setTab("new");
   }
@@ -779,21 +857,24 @@ function HomePage(props) {
             {history.map(function(g) {
               var pn = Array.isArray(g.player_names) ? g.player_names : JSON.parse(g.player_names || "[]");
               return (
-                <div key={g.id} className="game-item">
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
-                    <div className="game-item-meta">{fmtDate(g.started_at) + " - " + pn.join(", ")}</div>
-                    <div style={{ marginTop:4, display:"flex", gap:6, flexWrap:"wrap" }}>
-                      <span className={"badge " + (g.status === "completed" ? "badge-done" : "badge-progress")}>{g.status === "completed" ? "Completed" : "In Progress"}</span>
-                      <span className="badge" style={{ background:"rgba(13,36,24,0.8)", border:"1px solid #2d5238", color:"#5a8a6a" }}>{g.num_rounds + " rounds"}</span>
+                <div key={g.id} className="game-item" style={{ flexDirection:"column", alignItems:"stretch" }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div className="game-item-title" onClick={function() { navigate("/games/" + g.slug); }}>{g.title}</div>
+                      <div className="game-item-meta">{fmtDate(g.started_at) + " \u2014 " + pn.join(", ")}</div>
+                      <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                        <span className={"badge " + (g.status === "completed" ? "badge-done" : "badge-progress")}>{g.status === "completed" ? "Completed" : "In Progress"}</span>
+                        <span className="badge" style={{ background:"var(--bg-inset)", border:"1px solid var(--border)", color:"var(--text-muted)" }}>{g.num_rounds + " rounds"}</span>
+                        <EmojiStatsBar smiles={g.smiles} frowns={g.frowns} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="game-item-actions">
-                    <button className="btn-clone" onClick={function() { cloneGame(g); }}>+ Clone</button>
-                    <button className="btn btn-secondary btn-sm" onClick={function() { g.status === "completed" ? navigate("/games/" + g.slug) : resumeGame(g); }}>
-                      {g.status === "completed" ? "View" : "Resume"}
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={function() { deleteGame(g.id); }}>Del</button>
+                    <div className="game-item-actions">
+                      <button className="btn-clone" onClick={function() { cloneGame(g); }}>+ Clone</button>
+                      <button className="btn btn-secondary btn-sm" onClick={function() { g.status === "completed" ? navigate("/games/" + g.slug) : resumeGame(g); }}>
+                        {g.status === "completed" ? "View" : "Resume"}
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={function() { deleteGame(g.id); }}>Del</button>
+                    </div>
                   </div>
                 </div>
               );
@@ -805,6 +886,77 @@ function HomePage(props) {
   );
 }
 
+// ─── Passcode Gate ────────────────────────────────────────────────────────────
+function PasscodeGate(props) {
+  var onUnlock = props.onUnlock;
+  var [code, setCode] = useState("");
+  var [error, setError] = useState(null);
+  var [loading, setLoading] = useState(false);
+  var [theme, setTheme] = useState(function() { return localStorage.getItem("dirt-theme") || "dark"; });
+
+  async function submit() {
+    if (!code.trim()) return;
+    setLoading(true); setError(null);
+    try {
+      var result = await apiFetch("/auth/verify", { method:"POST", body:JSON.stringify({ passcode: code }) });
+      if (result.ok) {
+        savePasscodeHash(result.passcodeHash);
+        onUnlock();
+      } else {
+        setError("Incorrect passcode.");
+      }
+    } catch (e) {
+      setError("Incorrect passcode.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleTheme() {
+    setTheme(function(t) {
+      var next = t === "dark" ? "light" : "dark";
+      localStorage.setItem("dirt-theme", next);
+      return next;
+    });
+  }
+
+  return (
+    <>
+      <style>{STYLES}</style>
+      <div className={"app" + (theme === "light" ? " light" : "")}>
+        <div className="header">
+          <div className="header-nav">
+            <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+              {theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19"}
+            </button>
+          </div>
+          <h1>DIRT</h1>
+          <p>Card Game Score Tracker</p>
+        </div>
+        <div className="card" style={{ maxWidth:360 }}>
+          <h2>Welcome</h2>
+          <p style={{ color:"var(--text-secondary)", fontSize:"0.88rem", marginBottom:20 }}>Enter the passcode to access the app.</p>
+          {error && <div className="error-bar">{error}</div>}
+          <div className="form-group">
+            <label>Passcode</label>
+            <input
+              type="password"
+              placeholder="Enter passcode..."
+              value={code}
+              autoFocus
+              onChange={function(e) { setCode(e.target.value); setError(null); }}
+              onKeyDown={function(e) { if (e.key === "Enter") submit(); }}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={submit} disabled={loading || !code.trim()}>
+            {loading ? "Checking..." : "Enter"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
   var hash = useHash();
@@ -812,6 +964,23 @@ export default function App() {
   var [activeGame, setActiveGame] = useState(null);
   var [prefill, setPrefill] = useState(null);
   var [theme, setTheme] = useState(function() { return localStorage.getItem("dirt-theme") || "dark"; });
+  var [unlocked, setUnlocked] = useState(false);
+  var [authChecking, setAuthChecking] = useState(true);
+
+  // On mount: check if stored passcode hash matches server's current hash
+  useEffect(function() {
+    apiFetch("/auth/config").then(function(cfg) {
+      var savedHash = getSavedPasscodeHash();
+      if (savedHash && savedHash === cfg.passcodeHash) {
+        setUnlocked(true);
+      }
+      setAuthChecking(false);
+    }).catch(function() {
+      // If auth endpoint fails (e.g. no passcode configured), let through
+      setUnlocked(true);
+      setAuthChecking(false);
+    });
+  }, []);
 
   function toggleTheme() {
     setTheme(function(t) {
@@ -822,13 +991,7 @@ export default function App() {
   }
 
   function startGame(game, players, initialRounds) {
-    setActiveGame({
-      game: game,
-      players: players.map(function(p) { return p.name; }),
-      playerObjs: players,
-      rounds: initialRounds || [],
-      finished: false,
-    });
+    setActiveGame({ game: game, players: players.map(function(p) { return p.name; }), playerObjs: players, rounds: initialRounds || [], finished: false });
     navigate("/");
   }
 
@@ -841,13 +1004,30 @@ export default function App() {
   function handleClone() {
     if (!activeGame) return;
     var pids = (activeGame.playerObjs || []).map(function(p) { return p.id; });
+    var pslugs = (activeGame.playerObjs || []).map(function(p) { return p.slug; });
     setPrefill({
       title: incrementTitle(activeGame.game.title),
       numRounds: activeGame.game.num_rounds,
-      players: activeGame.players.map(function(n, i) { return { id: pids[i] || null, name: n }; }),
+      players: activeGame.players.map(function(n, i) { return { id: pids[i] || null, name: n, slug: pslugs[i] || null }; }),
     });
     setActiveGame(null);
     navigate("/");
+  }
+
+  if (authChecking) {
+    return (
+      <>
+        <style>{STYLES}</style>
+        <div className={"app" + (theme === "light" ? " light" : "")}>
+          <div className="header"><h1>DIRT</h1></div>
+          <div className="empty-state">Loading...</div>
+        </div>
+      </>
+    );
+  }
+
+  if (!unlocked) {
+    return <PasscodeGate onUnlock={function() { setUnlocked(true); }} />;
   }
 
   var isHome = route.page === "home";

@@ -74,3 +74,16 @@ export function fmtDate(ts) {
 export function permalink(type, slug) {
   return window.location.origin + window.location.pathname + "#/" + type + "/" + slug;
 }
+
+// Passcode helpers
+var STORAGE_HASH_KEY = "dirt_passcode_hash";
+
+export function getSavedPasscodeHash() {
+  try { return localStorage.getItem(STORAGE_HASH_KEY) || ""; }
+  catch (e) { return ""; }
+}
+
+export function savePasscodeHash(hash) {
+  try { localStorage.setItem(STORAGE_HASH_KEY, hash); }
+  catch (e) {}
+}

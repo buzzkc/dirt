@@ -281,4 +281,17 @@ export const STYLES = `
   .empty-state { text-align: center; padding: 32px 16px; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 0.85rem; }
   .inline-edit-row { display: flex; gap: 8px; align-items: center; }
   .inline-edit-row input { flex: 1; }
+
+  /* ── Player inline stats ──────────────────────────────────────────── */
+  .player-item-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; align-items: center; }
+  .player-stat-chip { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--text-primary); font-weight: 500; }
+  .player-stat-chip.win { color: var(--gold); }
+  .player-stat-chip.loss { color: var(--red-text); }
+  .player-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 400; margin-left: 2px; }
+
+  /* ── Emoji stats bar ──────────────────────────────────────────────── */
+  .emoji-stats-bar { display: inline-flex; gap: 12px; align-items: center; margin-top: 8px; }
+  .emoji-stat { display: inline-flex; align-items: center; gap: 4px; font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+  .emoji-stat-count { color: var(--text-secondary); }
+  .round-emoji { font-size: 1rem; display: block; margin: 2px 0; line-height: 1.2; }
 `;
