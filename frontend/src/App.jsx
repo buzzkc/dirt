@@ -180,6 +180,7 @@ function PlayerPicker(props) {
   var [newName, setNewName] = useState("");
   var [adding, setAdding] = useState(false);
   var [err, setErr] = useState(null);
+  var [dupPrompt, setDupPrompt] = useState(null);
 
   useEffect(function() { apiFetch("/players").then(setAllPlayers).catch(function() {}); }, []);
 
@@ -199,6 +200,14 @@ function PlayerPicker(props) {
   async function createAndAdd() {
     var name = newName.trim();
     if (!name) return;
+    var existing = allPlayers.find(function(p) {
+      return p.name.toLowerCase() === name.toLowerCase() && !selectedIds.includes(p.id);
+    });
+    if (existing) { setDupPrompt({ name: name, existing: existing }); return; }
+    await doCreate(name);
+  }
+
+  async function doCreate(name) {
     setAdding(true); setErr(null);
     try {
       var player = await apiFetch("/players", { method: "POST", body: JSON.stringify({ name: name }) });
@@ -207,6 +216,12 @@ function PlayerPicker(props) {
       setNewName("");
     } catch (e) { setErr(e.message); }
     finally { setAdding(false); }
+  }
+
+  function resolveDup(useExisting) {
+    if (useExisting) { addExisting(dupPrompt.existing); }
+    else { doCreate(dupPrompt.name); }
+    setDupPrompt(null); setNewName("");
   }
 
   return (
@@ -248,11 +263,23 @@ function PlayerPicker(props) {
           )}
           <label>Create New Player</label>
           {err && <div className="error-bar" style={{ marginBottom:8 }}>{err}</div>}
+          {dupPrompt && (
+            <div className="dup-prompt">
+              <div className="dup-prompt-msg">
+                <strong>{dupPrompt.existing.name}</strong> already exists. Add the existing player, or create a new one named <strong>{dupPrompt.name}</strong>?
+              </div>
+              <div className="dup-prompt-actions">
+                <button className="btn btn-secondary btn-sm" onClick={function() { resolveDup(true); }}>Add Existing</button>
+                <button className="btn btn-secondary btn-sm" onClick={function() { resolveDup(false); }}>Create New</button>
+                <button className="btn btn-danger btn-sm" onClick={function() { setDupPrompt(null); }}>Cancel</button>
+              </div>
+            </div>
+          )}
           <div className="player-search">
             <input type="text" placeholder="New player name..." value={newName}
               onChange={function(e) { setNewName(e.target.value); }}
               onKeyDown={function(e) { if (e.key === "Enter") createAndAdd(); }} />
-            <button className="btn btn-secondary btn-sm" onClick={createAndAdd} disabled={adding || !newName.trim()}>{adding ? "..." : "Add"}</button>
+            <button className="btn btn-secondary btn-sm" onClick={createAndAdd} disabled={adding || !newName.trim() || !!dupPrompt}>{adding ? "..." : "Add"}</button>
           </div>
           <div className="player-order-hint">Players are seated in the order selected above.</div>
         </>

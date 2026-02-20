@@ -247,6 +247,9 @@ export const STYLES = `
   .player-search input { flex: 1; }
   .player-search-results { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .player-order-hint { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+  .dup-prompt { background: var(--gold-dim); border: 1px solid var(--gold-shadow); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .dup-prompt-msg { font-size: 0.85rem; color: var(--text-primary); margin-bottom: 10px; line-height: 1.5; }
+  .dup-prompt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
   /* ── Player stats ─────────────────────────────────────────────────── */
   .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
