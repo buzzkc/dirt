@@ -600,19 +600,17 @@ function PlayersPage() {
   var [newName, setNewName] = useState(""); var [adding, setAdding] = useState(false);
   var [editId, setEditId] = useState(null); var [editName, setEditName] = useState("");
   var [err, setErr] = useState(null);
+  var [dupPrompt, setDupPrompt] = useState(null);
 
   function load() {
     setLoading(true);
-    // Use players-stats endpoint to get stats inline
     apiFetch("/players-stats").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e) {
-      // Fallback to basic players list
       apiFetch("/players").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e2) { setErr(e2.message); setLoading(false); });
     });
   }
   useEffect(load, []);
 
-  async function addPlayer() {
-    var name = newName.trim(); if (!name) return;
+  async function doAddPlayer(name) {
     setAdding(true); setErr(null);
     try {
       var p = await apiFetch("/players", { method:"POST", body:JSON.stringify({ name:name }) });
@@ -620,6 +618,20 @@ function PlayersPage() {
       setNewName("");
     } catch (e) { setErr(e.message); }
     finally { setAdding(false); }
+  }
+
+  function addPlayer() {
+    var name = newName.trim(); if (!name) return;
+    var existing = players.find(function(p) { return p.name.toLowerCase() === name.toLowerCase(); });
+    if (existing) { setDupPrompt({ name: name, existing: existing }); return; }
+    doAddPlayer(name);
+  }
+
+  function resolveDup(createNew) {
+    var name = dupPrompt.name;
+    setDupPrompt(null);
+    if (createNew) doAddPlayer(name);
+    else setNewName("");
   }
 
   async function saveEdit(id) {
@@ -645,10 +657,21 @@ function PlayersPage() {
         {err && <div className="error-bar">{err}</div>}
         <div className="form-group">
           <label>Add New Player</label>
+          {dupPrompt && (
+            <div className="dup-prompt">
+              <div className="dup-prompt-msg">
+                A player named <strong>{dupPrompt.existing.name}</strong> already exists. Add another player with the same name?
+              </div>
+              <div className="dup-prompt-actions">
+                <button className="btn btn-secondary btn-sm" onClick={function() { resolveDup(true); }}>Yes, Add Another</button>
+                <button className="btn btn-danger btn-sm" onClick={function() { resolveDup(false); }}>No, Cancel</button>
+              </div>
+            </div>
+          )}
           <div className="inline-edit-row">
             <input type="text" placeholder="Player name..." value={newName}
-              onChange={function(e) { setNewName(e.target.value); }} onKeyDown={function(e) { if (e.key === "Enter") addPlayer(); }} />
-            <button className="btn btn-secondary btn-sm" onClick={addPlayer} disabled={adding || !newName.trim()}>{adding ? "..." : "Add"}</button>
+              onChange={function(e) { setNewName(e.target.value); setDupPrompt(null); }} onKeyDown={function(e) { if (e.key === "Enter") addPlayer(); }} />
+            <button className="btn btn-secondary btn-sm" onClick={addPlayer} disabled={adding || !newName.trim() || !!dupPrompt}>{adding ? "..." : "Add"}</button>
           </div>
         </div>
         <hr className="divider" />
