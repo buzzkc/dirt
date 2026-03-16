@@ -100,11 +100,19 @@ function PlayerEntryRow(props) {
   var onChange = props.onChange; var name = props.name; var prevTotal = props.prevTotal;
   var numRounds = props.numRounds; var ri = props.roundIdx;
   var onBidKeyDown = props.onBidKeyDown;
+  var onAfterHands = props.onAfterHands; // called after hands confirmed (enter key or gotBid click)
   var isLeader = props.isLeader;
   var bid = parseInt(e.bid, 10);
   var hw  = e.gotBid ? bid : parseInt(e.handsWon, 10);
   var preview = !isNaN(bid) && !isNaN(hw) ? calcScore(bid, hw) : "-";
   var cards = cardsForRound(numRounds, ri);
+
+  function handleGotBid() {
+    onChange(pi, "gotBid", !e.gotBid);
+    // Delay so state update + re-render happens first, then advance focus
+    if (!e.gotBid && onAfterHands) setTimeout(onAfterHands, 0);
+  }
+
   return (
     <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "") + (isLeader ? " round-leader" : "")}>
       <div>
@@ -127,14 +135,16 @@ function PlayerEntryRow(props) {
       <div className="checkbox-wrap">
         <span className="checkbox-label">Got Bid</span>
         <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
-          onClick={function() { onChange(pi, "gotBid", !e.gotBid); }}>{e.gotBid ? "✓" : ""}</div>
+          onClick={handleGotBid}>{e.gotBid ? "✓" : ""}</div>
       </div>
       <div className="hands-wrap">
         <span className="checkbox-label">Hands</span>
         <input type="number" min="0" max={cards} className="hands-input"
           value={e.gotBid ? (isNaN(bid) ? "" : bid) : e.handsWon}
           disabled={e.gotBid}
-          onChange={function(ev) { onChange(pi, "handsWon", ev.target.value); }} />
+          onChange={function(ev) { onChange(pi, "handsWon", ev.target.value); }}
+          onKeyDown={function(ev) { if (ev.key === "Enter" && onAfterHands) { ev.preventDefault(); onAfterHands(); } }}
+          {...(props.handsDataAttrs || {})} />
         <span className="score-preview">{preview}</span>
       </div>
     </div>
@@ -504,6 +514,7 @@ function ActiveGame(props) {
             var bidRefs = roundEntry.entries.map(function() { return null; });
             return order.map(function(pi, displayPos) {
               var nextPi = order[(displayPos + 1) % n];
+              var isLast = displayPos === n - 1;
               return <PlayerEntryRow
                 key={pi}
                 entry={roundEntry.entries[pi]}
@@ -515,11 +526,20 @@ function ActiveGame(props) {
                 prevTotal={totalUpTo(pi, roundEntry.roundIdx)}
                 isLeader={displayPos === 0}
                 onBidKeyDown={function() {
-                  // Focus next player's bid input by querying by data-pi attribute
                   var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="' + roundEntry.roundIdx + '"]');
                   if (next) next.focus();
                 }}
+                onAfterHands={function() {
+                  if (isLast) {
+                    var btn = document.querySelector('[data-submit-round]');
+                    if (btn) btn.focus();
+                  } else {
+                    var next = document.querySelector('[data-hands-pi="' + nextPi + '"][data-round="' + roundEntry.roundIdx + '"]');
+                    if (next) next.focus();
+                  }
+                }}
                 bidDataAttrs={{ "data-bid-pi": pi, "data-round": roundEntry.roundIdx }}
+                handsDataAttrs={{ "data-hands-pi": pi, "data-round": roundEntry.roundIdx }}
               />;
             });
           })()}
@@ -532,7 +552,7 @@ function ActiveGame(props) {
             : null;
         })()}
         <TallyBar entries={roundEntry.entries} numRounds={numRounds} roundIdx={roundEntry.roundIdx} />
-        <button className="btn btn-primary" onClick={submitRound}
+        <button className="btn btn-primary" onClick={submitRound} data-submit-round
           disabled={!isValidRound(roundEntry.entries, numRounds, roundEntry.roundIdx) || saving}>
           {saving ? "Saving..." : roundEntry.roundIdx + 1 >= numRounds ? "Finish Game" : "Submit Round " + (roundEntry.roundIdx + 1)}
         </button>
@@ -555,6 +575,7 @@ function ActiveGame(props) {
               for (var k = 0; k < n; k++) order.push((offset + k) % n);
               return order.map(function(pi, displayPos) {
                 var nextPi = order[(displayPos + 1) % n];
+                var isLast = displayPos === n - 1;
                 return <PlayerEntryRow key={pi} entry={editingRound.entries[pi]} pi={pi}
                   numRounds={numRounds} roundIdx={editingRound.roundIdx}
                   onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)}
@@ -563,14 +584,24 @@ function ActiveGame(props) {
                     var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="edit-' + editingRound.roundIdx + '"]');
                     if (next) next.focus();
                   }}
+                  onAfterHands={function() {
+                    if (isLast) {
+                      var btn = document.querySelector('[data-submit-edit]');
+                      if (btn) btn.focus();
+                    } else {
+                      var next = document.querySelector('[data-hands-pi="' + nextPi + '"][data-round="edit-' + editingRound.roundIdx + '"]');
+                      if (next) next.focus();
+                    }
+                  }}
                   bidDataAttrs={{ "data-bid-pi": pi, "data-round": "edit-" + editingRound.roundIdx }}
+                  handsDataAttrs={{ "data-hands-pi": pi, "data-round": "edit-" + editingRound.roundIdx }}
                 />;
               });
             })()}
             <TallyBar entries={editingRound.entries} numRounds={numRounds} roundIdx={editingRound.roundIdx} />
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={function() { setEditingRound(null); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={saveEdit}
+              <button className="btn btn-primary" onClick={saveEdit} data-submit-edit
                 disabled={!isValidRound(editingRound.entries, numRounds, editingRound.roundIdx) || saving}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
