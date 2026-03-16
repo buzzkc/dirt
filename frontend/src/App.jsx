@@ -70,10 +70,27 @@ function TallyBar(props) {
   if (isOk)             { cls = "ok";   msg = "Hands check out!"; }
   else if (isOver)      { cls = "warn"; msg = (total - cards) + " too many — total must equal " + cards; }
   else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short — total must equal " + cards; }
+
+  // Sum of all bids entered so far (only entries where bid is a valid number)
+  var bidTotal = props.entries.reduce(function(s, e) {
+    var b = parseInt(e.bid, 10);
+    return s + (isNaN(b) ? 0 : b);
+  }, 0);
+  var bidsEntered = props.entries.filter(function(e) { return e.bid !== ""; }).length;
+  var allBidsIn = bidsEntered === props.entries.length;
+
   return (
-    <div className={"tally-bar " + cls}>
-      <span>{msg}</span>
-      <span className="tally-num">{total} / {cards} hands</span>
+    <div className="tally-bar-wrap">
+      {allBidsIn && (
+        <div className={"bid-subtotal" + (bidTotal > cards ? " bid-over" : bidTotal === cards ? " bid-exact" : "")}>
+          <span>Bid total</span>
+          <span className="tally-num">{bidTotal} / {cards}</span>
+        </div>
+      )}
+      <div className={"tally-bar " + cls}>
+        <span>{msg}</span>
+        <span className="tally-num">{total} / {cards} hands</span>
+      </div>
     </div>
   );
 }

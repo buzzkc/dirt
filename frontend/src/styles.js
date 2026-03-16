@@ -267,9 +267,18 @@ export const STYLES = `
   .score-preview { font-family: 'DM Mono', monospace; font-size: 0.85rem; color: var(--gold); text-align: right; min-width: 40px; }
 
   /* ── Tally bar ────────────────────────────────────────────────────── */
+  .tally-bar-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .bid-subtotal {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 16px; border-radius: 10px;
+    font-family: 'DM Mono', monospace; font-size: 0.82rem;
+    background: var(--bg-inset); border: 1px solid var(--border); color: var(--text-secondary);
+  }
+  .bid-subtotal.bid-over  { border-color: var(--red-warn-border); color: var(--red-warn-text); background: var(--red-warn-bg); }
+  .bid-subtotal.bid-exact { border-color: var(--border-met); color: var(--text-secondary); }
   .tally-bar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+    padding: 10px 16px; border-radius: 10px;
     font-family: 'DM Mono', monospace; font-size: 0.82rem; border: 1px solid; transition: all 0.2s;
   }
   .tally-bar.ok     { background: var(--green-dim);      border-color: var(--border-met);      color: var(--text-secondary); }
