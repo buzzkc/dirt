@@ -275,6 +275,7 @@ export const STYLES = `
     background: var(--bg-inset); border: 1px solid var(--border); color: var(--text-secondary);
   }
   .bid-subtotal.bid-over  { border-color: var(--red-warn-border); color: var(--red-warn-text); background: var(--red-warn-bg); }
+  .bid-subtotal.bid-under { border-color: var(--red-warn-border); color: var(--red-warn-text); background: var(--red-warn-bg); }
   .bid-subtotal.bid-exact { border-color: var(--border-met); color: var(--text-secondary); }
   .tally-bar {
     display: flex; align-items: center; justify-content: space-between;

@@ -82,7 +82,7 @@ function TallyBar(props) {
   return (
     <div className="tally-bar-wrap">
       {allBidsIn && (
-        <div className={"bid-subtotal" + (bidTotal > cards ? " bid-over" : bidTotal === cards ? " bid-exact" : "")}>
+        <div className={"bid-subtotal" + (bidTotal > cards ? " bid-over" : bidTotal < cards ? " bid-under" : " bid-exact")}>
           <span>Bid total</span>
           <span className="tally-num">{bidTotal} / {cards}</span>
         </div>
