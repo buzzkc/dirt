@@ -33,16 +33,14 @@ function parseRoute(hash) {
 }
 
 // ─── Emoji helpers ────────────────────────────────────────────────────────────
-var EMOJI_HAPPY = "😊";  // 😊
-var EMOJI_SAD   = "🙁";  // 🙁
+var EMOJI_HAPPY = "😊";
+var EMOJI_SAD   = "🙁";
 
 function RoundEmoji(props) {
   if (!props.emoji) return null;
-  var em = props.emoji === "happy" ? EMOJI_HAPPY : EMOJI_SAD;
+  var em    = props.emoji === "happy" ? EMOJI_HAPPY : EMOJI_SAD;
   var title = props.emoji === "happy" ? "Everyone made their bid!" : "Nobody made their bid";
-  return (
-    <span className="round-emoji" title={title} role="img" aria-label={title}>{em}</span>
-  );
+  return <span className="round-emoji" title={title} role="img" aria-label={title}>{em}</span>;
 }
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
@@ -65,22 +63,27 @@ function TallyBar(props) {
   var cards = cardsForRound(props.numRounds, props.roundIdx);
   var total = handsTotal(props.entries);
   var filled = allFilled(props.entries);
-  var isOk = filled && total === cards;
-  var isOver = filled && total > cards;
+  var isOk    = filled && total === cards;
+  var isOver  = filled && total > cards;
   var isUnder = filled && !isOk && total < cards;
   var cls = "neutral"; var msg = "Enter all bids and hands won";
-  if (isOk) { cls = "ok"; msg = "Hands check out!"; }
-  else if (isOver) { cls = "warn"; msg = (total - cards) + " too many — total must equal " + cards; }
+  if (isOk)             { cls = "ok";   msg = "Hands check out!"; }
+  else if (isOver)      { cls = "warn"; msg = (total - cards) + " too many — total must equal " + cards; }
   else if (isUnder && filled) { cls = "warn"; msg = (cards - total) + " short — total must equal " + cards; }
-  return <div className={"tally-bar " + cls}><span>{msg}</span><span className="tally-num">{total} / {cards} hands</span></div>;
+  return (
+    <div className={"tally-bar " + cls}>
+      <span>{msg}</span>
+      <span className="tally-num">{total} / {cards} hands</span>
+    </div>
+  );
 }
 
 function PlayerEntryRow(props) {
   var e = props.entry; var pi = props.pi;
-  var numRounds = props.numRounds; var ri = props.roundIdx;
   var onChange = props.onChange; var name = props.name; var prevTotal = props.prevTotal;
+  var numRounds = props.numRounds; var ri = props.roundIdx;
   var bid = parseInt(e.bid, 10);
-  var hw = e.gotBid ? bid : parseInt(e.handsWon, 10);
+  var hw  = e.gotBid ? bid : parseInt(e.handsWon, 10);
   var preview = !isNaN(bid) && !isNaN(hw) ? calcScore(bid, hw) : "-";
   var cards = cardsForRound(numRounds, ri);
   return (
@@ -138,7 +141,7 @@ function ScoreTable(props) {
                 {r.scores.map(function(s, pi) {
                   return <td key={pi}>
                     <div style={{ color:"var(--text-primary)" }}>{s}</div>
-                    <div style={{ fontSize:"0.68rem", color:"var(--text-secondary)" }}>{"= " + (totalUpTo(pi, ri) + s)}</div>
+                    <div style={{ fontSize:"0.68rem", color:"var(--score-sub)" }}>{"= " + (totalUpTo(pi, ri) + s)}</div>
                   </td>;
                 })}
               </tr>
@@ -159,15 +162,14 @@ function ScoreTable(props) {
   );
 }
 
-// ─── Game Emoji Stats Bar ─────────────────────────────────────────────────────
 function EmojiStatsBar(props) {
   var smiles = props.smiles || 0;
   var frowns = props.frowns || 0;
   if (smiles === 0 && frowns === 0) return null;
   return (
     <div className="emoji-stats-bar">
-      {smiles > 0 && <span className="emoji-stat"><span role="img" aria-label="everyone made bid">{EMOJI_HAPPY}</span> <span className="emoji-stat-count">x{smiles}</span></span>}
-      {frowns > 0 && <span className="emoji-stat"><span role="img" aria-label="nobody made bid">{EMOJI_SAD}</span> <span className="emoji-stat-count">x{frowns}</span></span>}
+      {smiles > 0 && <span className="emoji-stat"><span role="img" aria-label="everyone made bid">{EMOJI_HAPPY}</span><span className="emoji-stat-count">x{smiles}</span></span>}
+      {frowns > 0 && <span className="emoji-stat"><span role="img" aria-label="nobody made bid">{EMOJI_SAD}</span><span className="emoji-stat-count">x{frowns}</span></span>}
     </div>
   );
 }
@@ -300,7 +302,7 @@ function NewGameForm(props) {
   var [apiError, setApiError] = useState(null);
 
   var numPlayers = selectedPlayers.length;
-  var maxRounds = numPlayers >= 2 ? maxRoundsForPlayers(numPlayers) : 26;
+  var maxRounds  = numPlayers >= 2 ? maxRoundsForPlayers(numPlayers) : 26;
   var clampedRounds = Math.min(numRounds, maxRounds);
 
   useEffect(function() {
@@ -329,7 +331,7 @@ function NewGameForm(props) {
         num_players: numPlayers,
         num_rounds: clampedRounds,
         player_names: selectedPlayers.map(function(p) { return p.name; }),
-        player_ids: selectedPlayers.map(function(p) { return p.id; }),
+        player_ids:   selectedPlayers.map(function(p) { return p.id; }),
         started_at: new Date(startedAt).toISOString(),
       })});
       onStart(game, selectedPlayers);
@@ -402,7 +404,7 @@ function ActiveGame(props) {
   }
 
   function updateEntry(pi, f, v) { setRoundEntry(function(p) { return Object.assign({}, p, { entries: applyChange(p.entries, pi, f, v) }); }); }
-  function updateEdit(pi, f, v) { setEditingRound(function(p) { return Object.assign({}, p, { entries: applyChange(p.entries, pi, f, v) }); }); }
+  function updateEdit(pi, f, v)  { setEditingRound(function(p) { return Object.assign({}, p, { entries: applyChange(p.entries, pi, f, v) }); }); }
   function totalUpTo(pi, ri) { return rounds.slice(0, ri).reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); }
 
   async function submitRound() {
@@ -417,8 +419,7 @@ function ActiveGame(props) {
       var isLast = roundEntry.roundIdx + 1 >= numRounds;
       if (isLast) {
         await apiFetch("/games/" + game.id, { method:"PATCH", body:JSON.stringify({ status:"completed" }) });
-        setRounds(newRounds);
-        onFinish(newRounds);
+        setRounds(newRounds); onFinish(newRounds);
       } else {
         setRounds(newRounds);
         setRoundEntry({ roundIdx: roundEntry.roundIdx + 1, entries: blankEntries(players.length) });
@@ -443,12 +444,12 @@ function ActiveGame(props) {
   }
 
   var smiles = rounds.filter(function(r) { return r.emoji === "happy"; }).length;
-  var frowns = rounds.filter(function(r) { return r.emoji === "sad"; }).length;
+  var frowns  = rounds.filter(function(r) { return r.emoji === "sad";   }).length;
 
   return (
     <>
       {apiError && <div className="error-bar" style={{ maxWidth:600, margin:"0 auto 16px" }}>{apiError}</div>}
-      {saving && <div className="saving-bar" style={{ maxWidth:600, margin:"0 auto 12px" }}>Saving...</div>}
+      {saving   && <div className="saving-bar" style={{ maxWidth:600, margin:"0 auto 12px" }}>Saving...</div>}
 
       {rounds.length > 0 && (
         <div className="card">
@@ -518,7 +519,7 @@ function SummaryPage(props) {
   var winnerName = players[finalTotals.indexOf(maxFinal)] || "";
   var url = game.slug ? permalink("games", game.slug) : "";
   var smiles = rounds.filter(function(r) { return r.emoji === "happy"; }).length;
-  var frowns = rounds.filter(function(r) { return r.emoji === "sad"; }).length;
+  var frowns  = rounds.filter(function(r) { return r.emoji === "sad";   }).length;
   return (
     <>
       {url && <PermalinkBar url={url} />}
@@ -549,17 +550,15 @@ function GameDetailPage(props) {
     apiFetch("/games/" + props.slug).then(function(g) { setGame(g); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); });
   }, [props.slug]);
   if (loading) return <div className="card"><p style={{ color:"var(--text-secondary)", fontFamily:"DM Mono" }}>Loading...</p></div>;
-  if (err) return <div className="card"><div className="error-bar">{err}</div></div>;
-  if (!game) return null;
-  var players = game.player_names || [];
-  var pIds = game.player_ids || [];
-  var pSlugs = game.player_slugs || [];
-  var rounds = (game.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
+  if (err)     return <div className="card"><div className="error-bar">{err}</div></div>;
+  if (!game)   return null;
+  var players  = game.player_names || [];
+  var pIds     = game.player_ids   || [];
+  var pSlugs   = game.player_slugs || [];
+  var rounds   = (game.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
   var finalTotals = players.map(function(_, pi) { return rounds.reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); });
-  var maxFinal = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
-  var winnerName = players[finalTotals.indexOf(maxFinal)] || "";
-  var smiles = game.smiles || 0;
-  var frowns = game.frowns || 0;
+  var maxFinal    = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
+  var winnerName  = players[finalTotals.indexOf(maxFinal)] || "";
   return (
     <>
       <button className="page-back" onClick={function() { navigate("/"); }}>Back to Home</button>
@@ -569,15 +568,14 @@ function GameDetailPage(props) {
         <h2>{game.status === "completed" ? winnerName : game.title}</h2>
         <p>{game.status === "completed" ? (winnerName + " wins with " + maxFinal + " pts!") : "In progress"}</p>
         <p style={{ fontSize:"0.8rem", marginTop:8 }}>{fmtDate(game.started_at)}</p>
-        <EmojiStatsBar smiles={smiles} frowns={frowns} />
+        <EmojiStatsBar smiles={game.smiles || 0} frowns={game.frowns || 0} />
       </div>
       <div className="card">
         <h2>{game.title}</h2>
         {players.length > 0 && (
           <div style={{ marginBottom:16, display:"flex", flexWrap:"wrap", gap:6 }}>
             {players.map(function(name, i) {
-              var pid = pIds[i];
-              var pslug = pSlugs[i] || (pid ? String(pid) : null);
+              var pslug = pSlugs[i] || (pIds[i] ? String(pIds[i]) : null);
               return (
                 <div key={i} className="player-chip">
                   {pslug
@@ -604,8 +602,8 @@ function PlayersPage() {
 
   function load() {
     setLoading(true);
-    apiFetch("/players-stats").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e) {
-      apiFetch("/players").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e2) { setErr(e2.message); setLoading(false); });
+    apiFetch("/players-stats").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function() {
+      apiFetch("/players").then(function(ps) { setPlayers(ps); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); });
     });
   }
   useEffect(load, []);
@@ -670,7 +668,8 @@ function PlayersPage() {
           )}
           <div className="inline-edit-row">
             <input type="text" placeholder="Player name..." value={newName}
-              onChange={function(e) { setNewName(e.target.value); setDupPrompt(null); }} onKeyDown={function(e) { if (e.key === "Enter") addPlayer(); }} />
+              onChange={function(e) { setNewName(e.target.value); setDupPrompt(null); }}
+              onKeyDown={function(e) { if (e.key === "Enter") addPlayer(); }} />
             <button className="btn btn-secondary btn-sm" onClick={addPlayer} disabled={adding || !newName.trim() || !!dupPrompt}>{adding ? "..." : "Add"}</button>
           </div>
         </div>
@@ -728,8 +727,8 @@ function PlayerDetailPage(props) {
     apiFetch("/players/" + props.slug).then(function(d) { setData(d); setLoading(false); }).catch(function(e) { setErr(e.message); setLoading(false); });
   }, [props.slug]);
   if (loading) return <div className="card"><p style={{ color:"var(--text-secondary)", fontFamily:"DM Mono" }}>Loading...</p></div>;
-  if (err) return <div className="card"><div className="error-bar">{err}</div></div>;
-  if (!data) return null;
+  if (err)     return <div className="card"><div className="error-bar">{err}</div></div>;
+  if (!data)   return null;
   var stats = data.stats || {};
   return (
     <>
@@ -738,16 +737,16 @@ function PlayerDetailPage(props) {
       <div className="card">
         <h2>{data.name}</h2>
         <div className="stats-grid">
-          <div className="stat-box"><div className="stat-value">{stats.games_played || 0}</div><div className="stat-label">Games Played</div></div>
+          <div className="stat-box"><div className="stat-value">{stats.games_played || 0}</div><div className="stat-label">Games</div></div>
           <div className="stat-box"><div className="stat-value">{stats.wins || 0}</div><div className="stat-label">Wins</div></div>
           <div className="stat-box"><div className="stat-value">{stats.losses || 0}</div><div className="stat-label">Losses</div></div>
-          <div className="stat-box"><div className="stat-value">{stats.total_points || 0}</div><div className="stat-label">Total Points</div></div>
+          <div className="stat-box"><div className="stat-value">{stats.total_points || 0}</div><div className="stat-label">Points</div></div>
         </div>
         {(data.games_in_progress || []).length > 0 && (
           <>
-            <h3 style={{ marginBottom:10 }}>In Progress</h3>
+            <h3>In Progress</h3>
             <div className="game-list" style={{ marginBottom:16 }}>
-              {(data.games_in_progress || []).map(function(g) {
+              {data.games_in_progress.map(function(g) {
                 return (
                   <div key={g.id} className="game-item">
                     <div style={{ flex:1 }}>
@@ -763,9 +762,9 @@ function PlayerDetailPage(props) {
         )}
         {(data.games || []).length > 0 && (
           <>
-            <h3 style={{ marginBottom:10 }}>Completed Games</h3>
+            <h3>Completed Games</h3>
             <div className="game-list">
-              {(data.games || []).map(function(g) {
+              {data.games.map(function(g) {
                 return (
                   <div key={g.id} className="game-item">
                     <div style={{ flex:1 }}>
@@ -780,9 +779,7 @@ function PlayerDetailPage(props) {
             </div>
           </>
         )}
-        {(stats.games_played || 0) === 0 && (
-          <div className="empty-state">No completed games yet.</div>
-        )}
+        {(stats.games_played || 0) === 0 && <div className="empty-state">No completed games yet.</div>}
       </div>
     </>
   );
@@ -817,7 +814,7 @@ function RulesPage() {
             <li>The player left of the dealer leads the first trick with any card.</li>
             <li>Players must follow the led suit if possible.</li>
             <li>If unable to follow suit, any card including a trump (Diamond) may be played.</li>
-            <li>Highest card in the led suit wins, unless a Diamond is played&mdash;then highest Diamond wins.</li>
+            <li>Highest card in the led suit wins, unless a Diamond is played — then highest Diamond wins.</li>
             <li>The trick winner leads the next trick.</li>
           </ul>
         </div>
@@ -825,10 +822,9 @@ function RulesPage() {
           <h3>Scoring</h3>
           <ul>
             <li><strong>Made your bid:</strong> Bid + 10 pts &nbsp;<em>(bid 3, won 3 = 13 pts)</em></li>
-            <li><strong>Over your bid:</strong> Tricks won only &nbsp;<em>(bid 3, won 4 = 4 pts)</em></li>
-            <li><strong>Under your bid:</strong> Tricks won only &nbsp;<em>(bid 3, won 2 = 2 pts)</em></li>
+            <li><strong>Over or under your bid:</strong> Tricks won only &nbsp;<em>(bid 3, won 4 = 4 pts)</em></li>
             <li><strong>Bid zero, took none:</strong> 10 pts</li>
-            <li><strong>Bid zero, took tricks:</strong> Tricks won only &nbsp;<em>(bid 0, won 2 = 2 pts)</em></li>
+            <li><strong>Bid zero, took tricks:</strong> Tricks won only</li>
           </ul>
         </div>
         <div className="rules-section">
@@ -848,7 +844,7 @@ function RulesPage() {
 // ─── Home Page ────────────────────────────────────────────────────────────────
 function HomePage(props) {
   var onStartGame = props.onStartGame; var prefill = props.prefill; var setPrefill = props.setPrefill;
-  var [tab, setTab] = useState(prefill ? "new" : "new");
+  var [tab, setTab] = useState("new");
   var [history, setHistory] = useState([]);
   var [histLoading, setHistLoading] = useState(false);
   var [apiError, setApiError] = useState(null);
@@ -862,18 +858,18 @@ function HomePage(props) {
   async function resumeGame(g) {
     try {
       var data = await apiFetch("/games/" + g.id);
-      var pNames = Array.isArray(data.player_names) ? data.player_names : [];
-      var pIds = Array.isArray(data.player_ids) ? data.player_ids : [];
-      var pSlugs = Array.isArray(data.player_slugs) ? data.player_slugs : [];
+      var pNames  = Array.isArray(data.player_names)  ? data.player_names  : [];
+      var pIds    = Array.isArray(data.player_ids)    ? data.player_ids    : [];
+      var pSlugs  = Array.isArray(data.player_slugs)  ? data.player_slugs  : [];
       var players = pNames.map(function(n, i) { return { id: pIds[i] || null, name: n, slug: pSlugs[i] || null }; });
-      var loaded = (data.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
+      var loaded  = (data.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
       onStartGame(data, players, loaded);
     } catch (e) { setApiError(e.message); }
   }
 
   function cloneGame(g) {
-    var pn = Array.isArray(g.player_names) ? g.player_names : JSON.parse(g.player_names || "[]");
-    var pids = Array.isArray(g.player_ids) ? g.player_ids : JSON.parse(g.player_ids || "[]");
+    var pn     = Array.isArray(g.player_names) ? g.player_names : JSON.parse(g.player_names || "[]");
+    var pids   = Array.isArray(g.player_ids)   ? g.player_ids   : JSON.parse(g.player_ids   || "[]");
     var pslugs = Array.isArray(g.player_slugs) ? g.player_slugs : [];
     var players = pn.map(function(n, i) { return { id: pids[i] || null, name: n, slug: pslugs[i] || null }; });
     setPrefill({ title: incrementTitle(g.title), numRounds: g.num_rounds, players: players });
@@ -949,25 +945,14 @@ function PasscodeGate(props) {
     setLoading(true); setError(null);
     try {
       var result = await apiFetch("/auth/verify", { method:"POST", body:JSON.stringify({ passcode: code }) });
-      if (result.ok) {
-        savePasscodeHash(result.passcodeHash);
-        onUnlock();
-      } else {
-        setError("Incorrect passcode.");
-      }
-    } catch (e) {
-      setError("Incorrect passcode.");
-    } finally {
-      setLoading(false);
-    }
+      if (result.ok) { savePasscodeHash(result.passcodeHash); onUnlock(); }
+      else { setError("Incorrect passcode."); }
+    } catch (e) { setError("Incorrect passcode."); }
+    finally { setLoading(false); }
   }
 
   function toggleTheme() {
-    setTheme(function(t) {
-      var next = t === "dark" ? "light" : "dark";
-      localStorage.setItem("dirt-theme", next);
-      return next;
-    });
+    setTheme(function(t) { var next = t === "dark" ? "light" : "dark"; localStorage.setItem("dirt-theme", next); return next; });
   }
 
   return (
@@ -976,9 +961,7 @@ function PasscodeGate(props) {
       <div className={"app" + (theme === "light" ? " light" : "")}>
         <div className="header">
           <div className="header-nav">
-            <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
-              {theme === "dark" ? "☀️" : "🌙"}
-            </button>
+            <button className="theme-toggle" onClick={toggleTheme}>{theme === "dark" ? "☀️" : "🌙"}</button>
           </div>
           <h1>DIRT</h1>
           <p>Card Game Score Tracker</p>
@@ -989,14 +972,9 @@ function PasscodeGate(props) {
           {error && <div className="error-bar">{error}</div>}
           <div className="form-group">
             <label>Passcode</label>
-            <input
-              type="password"
-              placeholder="Enter passcode..."
-              value={code}
-              autoFocus
+            <input type="password" placeholder="Enter passcode..." value={code} autoFocus
               onChange={function(e) { setCode(e.target.value); setError(null); }}
-              onKeyDown={function(e) { if (e.key === "Enter") submit(); }}
-            />
+              onKeyDown={function(e) { if (e.key === "Enter") submit(); }} />
           </div>
           <button className="btn btn-primary" onClick={submit} disabled={loading || !code.trim()}>
             {loading ? "Checking..." : "Enter"}
@@ -1009,7 +987,7 @@ function PasscodeGate(props) {
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  var hash = useHash();
+  var hash  = useHash();
   var route = parseRoute(hash);
   var [activeGame, setActiveGame] = useState(null);
   var [prefill, setPrefill] = useState(null);
@@ -1017,27 +995,18 @@ export default function App() {
   var [unlocked, setUnlocked] = useState(false);
   var [authChecking, setAuthChecking] = useState(true);
 
-  // On mount: check if stored passcode hash matches server's current hash
   useEffect(function() {
     apiFetch("/auth/config").then(function(cfg) {
       var savedHash = getSavedPasscodeHash();
-      if (savedHash && savedHash === cfg.passcodeHash) {
-        setUnlocked(true);
-      }
+      if (savedHash && savedHash === cfg.passcodeHash) setUnlocked(true);
       setAuthChecking(false);
     }).catch(function() {
-      // If auth endpoint fails (e.g. no passcode configured), let through
-      setUnlocked(true);
-      setAuthChecking(false);
+      setUnlocked(true); setAuthChecking(false);
     });
   }, []);
 
   function toggleTheme() {
-    setTheme(function(t) {
-      var next = t === "dark" ? "light" : "dark";
-      localStorage.setItem("dirt-theme", next);
-      return next;
-    });
+    setTheme(function(t) { var next = t === "dark" ? "light" : "dark"; localStorage.setItem("dirt-theme", next); return next; });
   }
 
   function startGame(game, players, initialRounds) {
@@ -1053,15 +1022,14 @@ export default function App() {
 
   function handleClone() {
     if (!activeGame) return;
-    var pids = (activeGame.playerObjs || []).map(function(p) { return p.id; });
+    var pids   = (activeGame.playerObjs || []).map(function(p) { return p.id; });
     var pslugs = (activeGame.playerObjs || []).map(function(p) { return p.slug; });
     setPrefill({
       title: incrementTitle(activeGame.game.title),
       numRounds: activeGame.game.num_rounds,
       players: activeGame.players.map(function(n, i) { return { id: pids[i] || null, name: n, slug: pslugs[i] || null }; }),
     });
-    setActiveGame(null);
-    navigate("/");
+    setActiveGame(null); navigate("/");
   }
 
   if (authChecking) {
@@ -1076,9 +1044,7 @@ export default function App() {
     );
   }
 
-  if (!unlocked) {
-    return <PasscodeGate onUnlock={function() { setUnlocked(true); }} />;
-  }
+  if (!unlocked) return <PasscodeGate onUnlock={function() { setUnlocked(true); }} />;
 
   var isHome = route.page === "home";
 
@@ -1090,7 +1056,7 @@ export default function App() {
           <div className="header-nav">
             <button className={"nav-icon-btn" + (route.page === "players" ? " active" : "")} onClick={function() { navigate("/players"); }}>Players</button>
             <button className={"nav-icon-btn" + (route.page === "rules" ? " active" : "")} onClick={function() { navigate("/rules"); }}>? Rules</button>
-            <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}>
+            <button className="theme-toggle" onClick={toggleTheme} title={theme === "dark" ? "Switch to light" : "Switch to dark"}>
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
           </div>
@@ -1098,9 +1064,9 @@ export default function App() {
           <p>Card Game Score Tracker</p>
         </div>
 
-        {route.page === "rules" && <RulesPage />}
-        {route.page === "players" && <PlayersPage />}
-        {route.page === "player" && <PlayerDetailPage slug={route.slug} />}
+        {route.page === "rules"       && <RulesPage />}
+        {route.page === "players"     && <PlayersPage />}
+        {route.page === "player"      && <PlayerDetailPage slug={route.slug} />}
         {route.page === "game-detail" && <GameDetailPage slug={route.slug} />}
 
         {isHome && (

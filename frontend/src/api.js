@@ -56,7 +56,7 @@ export function computeScores(entries) {
 
 export function buildRound(roundIdx, entries) {
   var scores = computeScores(entries);
-  var allGot = entries.every(function(e) { return e.gotBid; });
+  var allGot  = entries.every(function(e) { return e.gotBid; });
   var noneGot = entries.every(function(e) { return !e.gotBid; });
   return { roundIdx: roundIdx, entries: entries, scores: scores, emoji: allGot ? "happy" : noneGot ? "sad" : null };
 }
@@ -75,15 +75,12 @@ export function permalink(type, slug) {
   return window.location.origin + window.location.pathname + "#/" + type + "/" + slug;
 }
 
-// Passcode helpers
-var STORAGE_HASH_KEY = "dirt_passcode_hash";
-
 export function getSavedPasscodeHash() {
-  try { return localStorage.getItem(STORAGE_HASH_KEY) || ""; }
+  try { return localStorage.getItem("dirt_passcode_hash") || ""; }
   catch (e) { return ""; }
 }
 
 export function savePasscodeHash(hash) {
-  try { localStorage.setItem(STORAGE_HASH_KEY, hash); }
+  try { localStorage.setItem("dirt_passcode_hash", hash); }
   catch (e) {}
 }

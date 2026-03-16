@@ -1,66 +1,37 @@
 # Dirt Card Game Scorekeeper
 
-A full-stack Docker app for tracking Dirt card game scores with persistent MySQL storage.
+Full-stack Docker app for tracking Dirt card game scores with MariaDB persistence.
 
 ## Quick Start
 
 ```bash
 # 1. Copy and configure environment
-cp env.dist .env
-# Edit .env to set your passwords and passcode
+cp .env.dist .env
+# Edit .env — set passwords and passcode
 
 # 2. Build and start
 docker compose up --build
 
-# 3. Run in background
+# 3. Background mode
 docker compose up --build -d
 ```
 
-Open **http://localhost:7001** — you'll be prompted for the passcode set in `.env`.
+Open **http://localhost:7001** — enter the passcode from your `.env`.
 
-| Service    | URL                         | Notes                     |
-|------------|-----------------------------|---------------------------|
-| App        | http://localhost:7001       | React frontend             |
-| phpMyAdmin | http://localhost:7002       | MySQL admin UI             |
-
-## Configuration
-
-Copy `env.dist` to `.env` and edit before first run:
-
-```
-APP_PASSCODE=your_secret_here     # Gate access to the app
-MYSQL_ROOT_PASSWORD=changeme_root
-MYSQL_PASSWORD=changeme_dirt
-```
-
-Changing `APP_PASSCODE` will invalidate all existing browser sessions.
+| Service    | URL                      |
+|------------|--------------------------|
+| App        | http://localhost:7001    |
+| phpMyAdmin | http://localhost:7002    |
 
 ## Stop / Reset
 
 ```bash
-docker compose down          # Stop services
-docker compose down -v       # Stop and wipe database
+docker compose down        # stop
+docker compose down -v     # stop + wipe DB volume (./mysql folder)
 ```
 
-## Security Notes
+## Notes
 
-- All database queries use parameterized statements (no SQL injection)
-- All user input is sanitized server-side before storage
-- Passcode verified server-side with timing-safe comparison
-- Passcode hash stored in localStorage (never the actual passcode)
-
-## Project Structure
-
-```
-dirt/
-├── .env              ← your local config (never commit)
-├── env.dist         ← template to copy from
-├── docker-compose.yml
-├── frontend/src/
-│   ├── App.jsx       ← React UI
-│   ├── api.js        ← shared helpers
-│   └── styles.js     ← CSS-in-JS theming
-└── backend/
-    ├── server.js     ← Express API
-    └── init.sql      ← DB schema
-```
+- The backend retries the DB connection up to 20 times (3s apart) on startup — no healthcheck needed.
+- Changing `APP_PASSCODE` invalidates all existing browser sessions.
+- All DB queries are parameterized. All user input is sanitized server-side.
