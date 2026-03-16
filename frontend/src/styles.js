@@ -240,7 +240,18 @@ export const STYLES = `
     display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
   }
   .player-entry-row.bid-met { border-color: var(--border-met); }
-  .player-name { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
+  .player-entry-row.round-leader { border-left: 3px solid var(--gold); }
+  .player-name { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .leads-badge {
+    display: inline-block; font-size: 0.6rem; font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--gold-dim); border: 1px solid var(--gold-shadow);
+    color: var(--gold); border-radius: 4px; padding: 1px 6px; font-weight: 400;
+  }
+  .bids-progress {
+    font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--text-muted);
+    text-align: center; margin-bottom: 8px; letter-spacing: 0.06em;
+  }
   .player-bid-info { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px; }
   .checkbox-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .checkbox-label { font-size: 0.65rem; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }

@@ -82,20 +82,28 @@ function PlayerEntryRow(props) {
   var e = props.entry; var pi = props.pi;
   var onChange = props.onChange; var name = props.name; var prevTotal = props.prevTotal;
   var numRounds = props.numRounds; var ri = props.roundIdx;
+  var onBidKeyDown = props.onBidKeyDown;
+  var isLeader = props.isLeader;
   var bid = parseInt(e.bid, 10);
   var hw  = e.gotBid ? bid : parseInt(e.handsWon, 10);
   var preview = !isNaN(bid) && !isNaN(hw) ? calcScore(bid, hw) : "-";
   var cards = cardsForRound(numRounds, ri);
   return (
-    <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "")}>
+    <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "") + (isLeader ? " round-leader" : "")}>
       <div>
-        <div className="player-name">{name}</div>
+        <div className="player-name">
+          {isLeader && <span className="leads-badge">Leads</span>}
+          {name}
+        </div>
         <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
         <div style={{ display:"flex", gap:8, marginTop:8 }}>
           <div className="form-group" style={{ marginBottom:0, flex:1 }}>
             <label>Bid</label>
             <input type="number" min="0" max={cards} className="hands-input" style={{ width:"100%" }}
-              value={e.bid} onChange={function(ev) { onChange(pi, "bid", ev.target.value); }} />
+              value={e.bid}
+              onChange={function(ev) { onChange(pi, "bid", ev.target.value); }}
+              onKeyDown={function(ev) { if (ev.key === "Enter" && onBidKeyDown) { ev.preventDefault(); onBidKeyDown(); } }}
+              {...(props.bidDataAttrs || {})} />
           </div>
         </div>
       </div>
@@ -469,11 +477,43 @@ function ActiveGame(props) {
           <div style={{ fontFamily:"DM Mono", fontSize:"0.72rem", color:"var(--text-muted)" }}>{(roundEntry.roundIdx + 1) + " / " + numRounds}</div>
         </div>
         <div style={{ marginBottom:16 }}>
-          {roundEntry.entries.map(function(entry, pi) {
-            return <PlayerEntryRow key={pi} entry={entry} pi={pi} numRounds={numRounds} roundIdx={roundEntry.roundIdx}
-              onChange={updateEntry} name={players[pi]} prevTotal={totalUpTo(pi, roundEntry.roundIdx)} />;
-          })}
+          {(function() {
+            var n = players.length;
+            var offset = roundEntry.roundIdx % n;
+            // Build display order: rotate so index `offset` is first
+            var order = [];
+            for (var k = 0; k < n; k++) order.push((offset + k) % n);
+            // Refs array for bid inputs, keyed by original player index
+            var bidRefs = roundEntry.entries.map(function() { return null; });
+            return order.map(function(pi, displayPos) {
+              var nextPi = order[(displayPos + 1) % n];
+              return <PlayerEntryRow
+                key={pi}
+                entry={roundEntry.entries[pi]}
+                pi={pi}
+                numRounds={numRounds}
+                roundIdx={roundEntry.roundIdx}
+                onChange={updateEntry}
+                name={players[pi]}
+                prevTotal={totalUpTo(pi, roundEntry.roundIdx)}
+                isLeader={displayPos === 0}
+                onBidKeyDown={function() {
+                  // Focus next player's bid input by querying by data-pi attribute
+                  var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="' + roundEntry.roundIdx + '"]');
+                  if (next) next.focus();
+                }}
+                bidDataAttrs={{ "data-bid-pi": pi, "data-round": roundEntry.roundIdx }}
+              />;
+            });
+          })()}
         </div>
+        {(function() {
+          var bidsEntered = roundEntry.entries.filter(function(e) { return e.bid !== ""; }).length;
+          var n = players.length;
+          return bidsEntered > 0 && bidsEntered < n
+            ? <div className="bids-progress">{bidsEntered + " of " + n + " bids entered"}</div>
+            : null;
+        })()}
         <TallyBar entries={roundEntry.entries} numRounds={numRounds} roundIdx={roundEntry.roundIdx} />
         <button className="btn btn-primary" onClick={submitRound}
           disabled={!isValidRound(roundEntry.entries, numRounds, roundEntry.roundIdx) || saving}>
@@ -491,10 +531,25 @@ function ActiveGame(props) {
             <div className="modal-title">{"Edit Round " + (editingRound.roundIdx + 1)}</div>
             <div className="modal-subtitle">{cardsForRound(numRounds, editingRound.roundIdx) + " cards — correct mistakes below"}</div>
             {apiError && <div className="error-bar">{apiError}</div>}
-            {editingRound.entries.map(function(entry, pi) {
-              return <PlayerEntryRow key={pi} entry={entry} pi={pi} numRounds={numRounds} roundIdx={editingRound.roundIdx}
-                onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)} />;
-            })}
+            {(function() {
+              var n = players.length;
+              var offset = editingRound.roundIdx % n;
+              var order = [];
+              for (var k = 0; k < n; k++) order.push((offset + k) % n);
+              return order.map(function(pi, displayPos) {
+                var nextPi = order[(displayPos + 1) % n];
+                return <PlayerEntryRow key={pi} entry={editingRound.entries[pi]} pi={pi}
+                  numRounds={numRounds} roundIdx={editingRound.roundIdx}
+                  onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)}
+                  isLeader={displayPos === 0}
+                  onBidKeyDown={function() {
+                    var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="edit-' + editingRound.roundIdx + '"]');
+                    if (next) next.focus();
+                  }}
+                  bidDataAttrs={{ "data-bid-pi": pi, "data-round": "edit-" + editingRound.roundIdx }}
+                />;
+              });
+            })()}
             <TallyBar entries={editingRound.entries} numRounds={numRounds} roundIdx={editingRound.roundIdx} />
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={function() { setEditingRound(null); }}>Cancel</button>
