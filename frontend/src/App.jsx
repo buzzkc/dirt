@@ -271,6 +271,7 @@ function PlayerPicker(props) {
   var [adding, setAdding] = useState(false);
   var [err, setErr] = useState(null);
   var [dupPrompt, setDupPrompt] = useState(null);
+  var searchRef = { current: null };
 
   useEffect(function() { apiFetch("/players").then(setAllPlayers).catch(function() {}); }, []);
 
@@ -283,6 +284,7 @@ function PlayerPicker(props) {
     if (selected.length >= maxPlayers) return;
     onChange(selected.concat([{ id: player.id, name: player.name, slug: player.slug }]));
     setSearch("");
+    setTimeout(function() { if (searchRef.current) searchRef.current.focus(); }, 0);
   }
 
   function remove(idx) { onChange(selected.filter(function(_, i) { return i !== idx; })); }
@@ -335,7 +337,8 @@ function PlayerPicker(props) {
           {allPlayers.length > 0 && (
             <>
               <div className="player-search">
-                <input type="text" placeholder="Search existing players..." value={search}
+                <input type="text" placeholder="Search and add existing players..." value={search}
+                  ref={function(el) { searchRef.current = el; }}
                   onChange={function(e) { setSearch(e.target.value); }} />
               </div>
               {search.length > 0 && filtered.length > 0 && (
