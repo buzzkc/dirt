@@ -237,7 +237,7 @@ export const STYLES = `
   .player-entry-row {
     background: var(--bg-player-row); border: 1px solid var(--border);
     border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
-    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+    display: block;
   }
   .player-entry-row.bid-met { border-color: var(--border-met); }
   .player-entry-row.round-leader { border-left: 3px solid var(--gold); }
@@ -420,6 +420,46 @@ export const STYLES = `
   .emoji-stat-count { color: var(--text-secondary); }
 
   /* ── Rules page ───────────────────────────────────────────────────── */
+  /* ── NumPad ──────────────────────────────────────────────────────────────── */
+  .numpad-field-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .numpad-field-label { font-size: 0.65rem; color: var(--text-secondary); letter-spacing: 0.1em; text-transform: uppercase; }
+  .numpad-display {
+    width: 52px; height: 44px; border-radius: 8px;
+    background: var(--bg-inset); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 1.3rem; font-weight: 600;
+    color: var(--text-primary); cursor: pointer; transition: border-color 0.15s;
+    user-select: none;
+  }
+  .numpad-display:hover { border-color: var(--text-secondary); }
+  .numpad-display.active { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-shadow); }
+  .numpad-display.disabled { opacity: 0.4; cursor: default; }
+  .numpad-placeholder { color: var(--text-muted); font-size: 1rem; }
+  .numpad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-top: 12px; padding: 12px;
+    background: var(--bg-inset); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .numpad-key {
+    height: 52px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text-primary);
+    font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 500;
+    cursor: pointer; transition: all 0.1s;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+  .numpad-key:hover  { border-color: var(--text-secondary); background: var(--bg-round-entry); }
+  .numpad-key:active { transform: scale(0.93); }
+  .numpad-back  { color: var(--red-text); border-color: var(--red-border); }
+  .numpad-back:hover  { background: var(--red-bg); }
+  .numpad-enter {
+    background: var(--btn-primary-bg); color: var(--btn-primary-color);
+    border-color: transparent; font-size: 1.4rem;
+    box-shadow: var(--btn-primary-shadow);
+  }
+  .numpad-enter:hover { opacity: 0.9; }
+
   .rules-section { margin-bottom: 20px; }
   .rules-section h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--gold); margin-bottom: 8px; }
   .rules-section p { font-size: 0.9rem; color: var(--text-primary); line-height: 1.6; margin-bottom: 6px; }

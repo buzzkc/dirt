@@ -95,57 +95,142 @@ function TallyBar(props) {
   );
 }
 
+// ─── NumPad ───────────────────────────────────────────────────────────────────
+function NumPad(props) {
+  var value = props.value;
+  var onValue = props.onValue;   // called with new string value on each press
+  var onEnter = props.onEnter;   // called when Enter tapped
+  var max = props.max;
+
+  function press(digit) {
+    var next = (value === "" ? "" : value) + digit;
+    // Prevent leading zeros (e.g. "00" → "0")
+    next = String(parseInt(next, 10));
+    if (max !== undefined && parseInt(next, 10) > max) return;
+    onValue(next);
+  }
+
+  function backspace() {
+    var next = value.slice(0, -1);
+    onValue(next);
+  }
+
+  var keys = ["1","2","3","4","5","6","7","8","9","⌫","0","↵"];
+
+  return (
+    <div className="numpad">
+      {keys.map(function(k) {
+        var isBack  = k === "⌫";
+        var isEnter = k === "↵";
+        return (
+          <button key={k}
+            className={"numpad-key" + (isBack ? " numpad-back" : "") + (isEnter ? " numpad-enter" : "")}
+            onMouseDown={function(ev) {
+              ev.preventDefault(); // prevent input blur
+              if (isBack)  backspace();
+              else if (isEnter) { if (onEnter) onEnter(); }
+              else press(k);
+            }}
+          >{k}</button>
+        );
+      })}
+    </div>
+  );
+}
+
 function PlayerEntryRow(props) {
   var e = props.entry; var pi = props.pi;
   var onChange = props.onChange; var name = props.name; var prevTotal = props.prevTotal;
   var numRounds = props.numRounds; var ri = props.roundIdx;
   var onBidKeyDown = props.onBidKeyDown;
-  var onAfterHands = props.onAfterHands; // called after hands confirmed (enter key or gotBid click)
+  var onAfterHands = props.onAfterHands;
   var isLeader = props.isLeader;
   var bid = parseInt(e.bid, 10);
   var hw  = e.gotBid ? bid : parseInt(e.handsWon, 10);
   var preview = !isNaN(bid) && !isNaN(hw) ? calcScore(bid, hw) : "-";
   var cards = cardsForRound(numRounds, ri);
 
+  // Which field has the numpad open: "bid" | "hands" | null
+  var [activeField, setActiveField] = useState(null);
+
+  function openBid()   { setActiveField("bid"); }
+  function openHands() { if (!e.gotBid) setActiveField("hands"); }
+  function closeAll()  { setActiveField(null); }
+
   function handleGotBid() {
     onChange(pi, "gotBid", !e.gotBid);
-    // Delay so state update + re-render happens first, then advance focus
+    closeAll();
     if (!e.gotBid && onAfterHands) setTimeout(onAfterHands, 0);
+  }
+
+  function bidEnter() {
+    closeAll();
+    if (onBidKeyDown) onBidKeyDown();
+  }
+
+  function handsEnter() {
+    closeAll();
+    if (onAfterHands) onAfterHands();
   }
 
   return (
     <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "") + (isLeader ? " round-leader" : "")}>
-      <div>
-        <div className="player-name">
-          {isLeader && <span className="leads-badge">Leads</span>}
-          {name}
-        </div>
-        <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
-        <div style={{ display:"flex", gap:8, marginTop:8 }}>
-          <div className="form-group" style={{ marginBottom:0, flex:1 }}>
-            <label>Bid</label>
-            <input type="number" min="0" max={cards} className="hands-input" style={{ width:"100%" }}
-              value={e.bid}
-              onChange={function(ev) { onChange(pi, "bid", ev.target.value); }}
-              onKeyDown={function(ev) { if (ev.key === "Enter" && onBidKeyDown) { ev.preventDefault(); onBidKeyDown(); } }}
-              {...(props.bidDataAttrs || {})} />
+      <div style={{ gridColumn: "1 / -1" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+          <div>
+            <div className="player-name">
+              {isLeader && <span className="leads-badge">Leads</span>}
+              {name}
+            </div>
+            <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            {/* Bid display */}
+            <div className="numpad-field-wrap">
+              <span className="numpad-field-label">Bid</span>
+              <div className={"numpad-display" + (activeField === "bid" ? " active" : "")}
+                onClick={openBid}>
+                {e.bid !== "" ? e.bid : <span className="numpad-placeholder">—</span>}
+              </div>
+            </div>
+            {/* Got Bid checkbox */}
+            <div className="checkbox-wrap">
+              <span className="checkbox-label">Got Bid</span>
+              <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
+                onClick={handleGotBid}>{e.gotBid ? "✓" : ""}</div>
+            </div>
+            {/* Hands display */}
+            <div className="numpad-field-wrap">
+              <span className="numpad-field-label">Hands</span>
+              <div className={"numpad-display" + (e.gotBid ? " disabled" : "") + (activeField === "hands" ? " active" : "")}
+                onClick={openHands}>
+                {e.gotBid
+                  ? (isNaN(bid) ? "—" : bid)
+                  : (e.handsWon !== "" ? e.handsWon : <span className="numpad-placeholder">—</span>)}
+              </div>
+            </div>
+            {/* Score preview */}
+            <span className="score-preview">{preview}</span>
           </div>
         </div>
-      </div>
-      <div className="checkbox-wrap">
-        <span className="checkbox-label">Got Bid</span>
-        <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
-          onClick={handleGotBid}>{e.gotBid ? "✓" : ""}</div>
-      </div>
-      <div className="hands-wrap">
-        <span className="checkbox-label">Hands</span>
-        <input type="number" min="0" max={cards} className="hands-input"
-          value={e.gotBid ? (isNaN(bid) ? "" : bid) : e.handsWon}
-          disabled={e.gotBid}
-          onChange={function(ev) { onChange(pi, "handsWon", ev.target.value); }}
-          onKeyDown={function(ev) { if (ev.key === "Enter" && onAfterHands) { ev.preventDefault(); onAfterHands(); } }}
-          {...(props.handsDataAttrs || {})} />
-        <span className="score-preview">{preview}</span>
+
+        {/* Inline numpad - shown below the row when a field is active */}
+        {activeField === "bid" && (
+          <NumPad
+            value={e.bid}
+            max={cards}
+            onValue={function(v) { onChange(pi, "bid", v); }}
+            onEnter={bidEnter}
+          />
+        )}
+        {activeField === "hands" && !e.gotBid && (
+          <NumPad
+            value={e.handsWon}
+            max={cards}
+            onValue={function(v) { onChange(pi, "handsWon", v); }}
+            onEnter={handsEnter}
+          />
+        )}
       </div>
     </div>
   );
@@ -526,20 +611,16 @@ function ActiveGame(props) {
                 prevTotal={totalUpTo(pi, roundEntry.roundIdx)}
                 isLeader={displayPos === 0}
                 onBidKeyDown={function() {
-                  var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="' + roundEntry.roundIdx + '"]');
-                  if (next) next.focus();
+                  // Numpad Enter on bid — open hands numpad on next player
+                  // This is handled via onAfterHands chain; nothing to DOM-query
                 }}
                 onAfterHands={function() {
                   if (isLast) {
                     var btn = document.querySelector('[data-submit-round]');
                     if (btn) btn.focus();
-                  } else {
-                    var next = document.querySelector('[data-hands-pi="' + nextPi + '"][data-round="' + roundEntry.roundIdx + '"]');
-                    if (next) next.focus();
                   }
+                  // For non-last players, next player's numpad opens when they tap their field
                 }}
-                bidDataAttrs={{ "data-bid-pi": pi, "data-round": roundEntry.roundIdx }}
-                handsDataAttrs={{ "data-hands-pi": pi, "data-round": roundEntry.roundIdx }}
               />;
             });
           })()}
@@ -580,21 +661,13 @@ function ActiveGame(props) {
                   numRounds={numRounds} roundIdx={editingRound.roundIdx}
                   onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)}
                   isLeader={displayPos === 0}
-                  onBidKeyDown={function() {
-                    var next = document.querySelector('[data-bid-pi="' + nextPi + '"][data-round="edit-' + editingRound.roundIdx + '"]');
-                    if (next) next.focus();
-                  }}
+                  onBidKeyDown={function() {}}
                   onAfterHands={function() {
                     if (isLast) {
                       var btn = document.querySelector('[data-submit-edit]');
                       if (btn) btn.focus();
-                    } else {
-                      var next = document.querySelector('[data-hands-pi="' + nextPi + '"][data-round="edit-' + editingRound.roundIdx + '"]');
-                      if (next) next.focus();
                     }
                   }}
-                  bidDataAttrs={{ "data-bid-pi": pi, "data-round": "edit-" + editingRound.roundIdx }}
-                  handsDataAttrs={{ "data-hands-pi": pi, "data-round": "edit-" + editingRound.roundIdx }}
                 />;
               });
             })()}
