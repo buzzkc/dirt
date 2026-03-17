@@ -98,22 +98,18 @@ function TallyBar(props) {
 // ─── NumPad ───────────────────────────────────────────────────────────────────
 function NumPad(props) {
   var value = props.value;
-  var onValue = props.onValue;   // called with new string value on each press
-  var onEnter = props.onEnter;   // called when Enter tapped
+  var onValue = props.onValue;
+  var onEnter = props.onEnter;
   var max = props.max;
 
   function press(digit) {
-    var next = (value === "" ? "" : value) + digit;
-    // Prevent leading zeros (e.g. "00" → "0")
+    var next = value === "" ? digit : value + digit;
     next = String(parseInt(next, 10));
     if (max !== undefined && parseInt(next, 10) > max) return;
     onValue(next);
   }
 
-  function backspace() {
-    var next = value.slice(0, -1);
-    onValue(next);
-  }
+  function backspace() { onValue(value.slice(0, -1)); }
 
   var keys = ["1","2","3","4","5","6","7","8","9","⌫","0","↵"];
 
@@ -126,8 +122,8 @@ function NumPad(props) {
           <button key={k}
             className={"numpad-key" + (isBack ? " numpad-back" : "") + (isEnter ? " numpad-enter" : "")}
             onMouseDown={function(ev) {
-              ev.preventDefault(); // prevent input blur
-              if (isBack)  backspace();
+              ev.preventDefault();
+              if (isBack) backspace();
               else if (isEnter) { if (onEnter) onEnter(); }
               else press(k);
             }}
@@ -138,44 +134,27 @@ function NumPad(props) {
   );
 }
 
+// activeField: "bid" | "hands" | null  — controlled by parent
 function PlayerEntryRow(props) {
   var e = props.entry; var pi = props.pi;
   var onChange = props.onChange; var name = props.name; var prevTotal = props.prevTotal;
   var numRounds = props.numRounds; var ri = props.roundIdx;
-  var onBidKeyDown = props.onBidKeyDown;
-  var onAfterHands = props.onAfterHands;
   var isLeader = props.isLeader;
+  var activeField = props.activeField;   // "bid" | "hands" | null — from parent
+  var onOpenBid   = props.onOpenBid;     // parent opens bid numpad for this row
+  var onOpenHands = props.onOpenHands;   // parent opens hands numpad for this row
+  var onBidEnter   = props.onBidEnter;   // bid ↵ pressed
+  var onHandsEnter = props.onHandsEnter; // hands ↵ pressed
+  var onGotBid     = props.onGotBid;     // got-bid checkbox toggled
+
   var bid = parseInt(e.bid, 10);
   var hw  = e.gotBid ? bid : parseInt(e.handsWon, 10);
   var preview = !isNaN(bid) && !isNaN(hw) ? calcScore(bid, hw) : "-";
   var cards = cardsForRound(numRounds, ri);
 
-  // Which field has the numpad open: "bid" | "hands" | null
-  var [activeField, setActiveField] = useState(null);
-
-  function openBid()   { setActiveField("bid"); }
-  function openHands() { if (!e.gotBid) setActiveField("hands"); }
-  function closeAll()  { setActiveField(null); }
-
-  function handleGotBid() {
-    onChange(pi, "gotBid", !e.gotBid);
-    closeAll();
-    if (!e.gotBid && onAfterHands) setTimeout(onAfterHands, 0);
-  }
-
-  function bidEnter() {
-    closeAll();
-    if (onBidKeyDown) onBidKeyDown();
-  }
-
-  function handsEnter() {
-    closeAll();
-    if (onAfterHands) onAfterHands();
-  }
-
   return (
     <div className={"player-entry-row" + (e.gotBid ? " bid-met" : "") + (isLeader ? " round-leader" : "")}>
-      <div style={{ gridColumn: "1 / -1" }}>
+      <div>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
           <div>
             <div className="player-name">
@@ -185,51 +164,39 @@ function PlayerEntryRow(props) {
             <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            {/* Bid display */}
             <div className="numpad-field-wrap">
               <span className="numpad-field-label">Bid</span>
               <div className={"numpad-display" + (activeField === "bid" ? " active" : "")}
-                onClick={openBid}>
+                onMouseDown={function(ev) { ev.preventDefault(); onOpenBid && onOpenBid(); }}>
                 {e.bid !== "" ? e.bid : <span className="numpad-placeholder">—</span>}
               </div>
             </div>
-            {/* Got Bid checkbox */}
             <div className="checkbox-wrap">
               <span className="checkbox-label">Got Bid</span>
               <div className={"custom-checkbox" + (e.gotBid ? " checked" : "")}
-                onClick={handleGotBid}>{e.gotBid ? "✓" : ""}</div>
+                onMouseDown={function(ev) { ev.preventDefault(); onGotBid && onGotBid(); }}>{e.gotBid ? "✓" : ""}</div>
             </div>
-            {/* Hands display */}
             <div className="numpad-field-wrap">
               <span className="numpad-field-label">Hands</span>
               <div className={"numpad-display" + (e.gotBid ? " disabled" : "") + (activeField === "hands" ? " active" : "")}
-                onClick={openHands}>
+                onMouseDown={function(ev) { ev.preventDefault(); if (!e.gotBid) onOpenHands && onOpenHands(); }}>
                 {e.gotBid
                   ? (isNaN(bid) ? "—" : bid)
                   : (e.handsWon !== "" ? e.handsWon : <span className="numpad-placeholder">—</span>)}
               </div>
             </div>
-            {/* Score preview */}
             <span className="score-preview">{preview}</span>
           </div>
         </div>
-
-        {/* Inline numpad - shown below the row when a field is active */}
         {activeField === "bid" && (
-          <NumPad
-            value={e.bid}
-            max={cards}
+          <NumPad value={e.bid} max={cards}
             onValue={function(v) { onChange(pi, "bid", v); }}
-            onEnter={bidEnter}
-          />
+            onEnter={onBidEnter} />
         )}
         {activeField === "hands" && !e.gotBid && (
-          <NumPad
-            value={e.handsWon}
-            max={cards}
+          <NumPad value={e.handsWon} max={cards}
             onValue={function(v) { onChange(pi, "handsWon", v); }}
-            onEnter={handsEnter}
-          />
+            onEnter={onHandsEnter} />
         )}
       </div>
     </div>
@@ -510,6 +477,9 @@ function ActiveGame(props) {
   var [editingRound, setEditingRound] = useState(null);
   var [saving, setSaving] = useState(false);
   var [apiError, setApiError] = useState(null);
+  // activeNumpad: { pi: playerIndex, field: "bid"|"hands" } | null
+  var [activeNumpad, setActiveNumpad] = useState(null);
+  var [editActiveNumpad, setEditActiveNumpad] = useState(null);
 
   function blankEntries(n) { return Array.from({ length: n }, function() { return { bid:"", handsWon:"", gotBid:false }; }); }
 
@@ -543,6 +513,7 @@ function ActiveGame(props) {
       } else {
         setRounds(newRounds);
         setRoundEntry({ roundIdx: roundEntry.roundIdx + 1, entries: blankEntries(players.length) });
+        setActiveNumpad(null);
       }
     } catch (e) { setApiError(e.message); }
     finally { setSaving(false); }
@@ -592,14 +563,20 @@ function ActiveGame(props) {
           {(function() {
             var n = players.length;
             var offset = roundEntry.roundIdx % n;
-            // Build display order: rotate so index `offset` is first
             var order = [];
             for (var k = 0; k < n; k++) order.push((offset + k) % n);
-            // Refs array for bid inputs, keyed by original player index
-            var bidRefs = roundEntry.entries.map(function() { return null; });
+
+            function focusSubmit() {
+              var btn = document.querySelector('[data-submit-round]');
+              if (btn) btn.focus();
+              setActiveNumpad(null);
+            }
+
             return order.map(function(pi, displayPos) {
-              var nextPi = order[(displayPos + 1) % n];
-              var isLast = displayPos === n - 1;
+              var isLast   = displayPos === n - 1;
+              var nextPi   = order[(displayPos + 1) % n];
+              var isCurrent = activeNumpad && activeNumpad.pi === pi;
+
               return <PlayerEntryRow
                 key={pi}
                 entry={roundEntry.entries[pi]}
@@ -610,16 +587,27 @@ function ActiveGame(props) {
                 name={players[pi]}
                 prevTotal={totalUpTo(pi, roundEntry.roundIdx)}
                 isLeader={displayPos === 0}
-                onBidKeyDown={function() {
-                  // Numpad Enter on bid — open hands numpad on next player
-                  // This is handled via onAfterHands chain; nothing to DOM-query
+                activeField={isCurrent ? activeNumpad.field : null}
+                onOpenBid={function()   { setActiveNumpad({ pi: pi, field: "bid" }); }}
+                onOpenHands={function() { setActiveNumpad({ pi: pi, field: "hands" }); }}
+                onBidEnter={function() {
+                  // bid ↵ → open hands for next player (or submit if last)
+                  if (isLast) { focusSubmit(); }
+                  else { setActiveNumpad({ pi: nextPi, field: "bid" }); }
                 }}
-                onAfterHands={function() {
-                  if (isLast) {
-                    var btn = document.querySelector('[data-submit-round]');
-                    if (btn) btn.focus();
+                onHandsEnter={function() {
+                  // hands ↵ → open hands for next player (or submit if last)
+                  if (isLast) { focusSubmit(); }
+                  else { setActiveNumpad({ pi: nextPi, field: "hands" }); }
+                }}
+                onGotBid={function() {
+                  var wasChecked = roundEntry.entries[pi].gotBid;
+                  updateEntry(pi, "gotBid", !wasChecked);
+                  // Checking (not unchecking) advances to next hands or submit
+                  if (!wasChecked) {
+                    if (isLast) { setTimeout(focusSubmit, 0); }
+                    else { setActiveNumpad({ pi: nextPi, field: "hands" }); }
                   }
-                  // For non-last players, next player's numpad opens when they tap their field
                 }}
               />;
             });
@@ -654,18 +642,39 @@ function ActiveGame(props) {
               var offset = editingRound.roundIdx % n;
               var order = [];
               for (var k = 0; k < n; k++) order.push((offset + k) % n);
+
+              function focusSave() {
+                var btn = document.querySelector('[data-submit-edit]');
+                if (btn) btn.focus();
+                setEditActiveNumpad(null);
+              }
+
               return order.map(function(pi, displayPos) {
-                var nextPi = order[(displayPos + 1) % n];
-                var isLast = displayPos === n - 1;
+                var isLast    = displayPos === n - 1;
+                var nextPi    = order[(displayPos + 1) % n];
+                var isCurrent = editActiveNumpad && editActiveNumpad.pi === pi;
+
                 return <PlayerEntryRow key={pi} entry={editingRound.entries[pi]} pi={pi}
                   numRounds={numRounds} roundIdx={editingRound.roundIdx}
                   onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)}
                   isLeader={displayPos === 0}
-                  onBidKeyDown={function() {}}
-                  onAfterHands={function() {
-                    if (isLast) {
-                      var btn = document.querySelector('[data-submit-edit]');
-                      if (btn) btn.focus();
+                  activeField={isCurrent ? editActiveNumpad.field : null}
+                  onOpenBid={function()   { setEditActiveNumpad({ pi: pi, field: "bid" }); }}
+                  onOpenHands={function() { setEditActiveNumpad({ pi: pi, field: "hands" }); }}
+                  onBidEnter={function() {
+                    if (isLast) { focusSave(); }
+                    else { setEditActiveNumpad({ pi: nextPi, field: "bid" }); }
+                  }}
+                  onHandsEnter={function() {
+                    if (isLast) { focusSave(); }
+                    else { setEditActiveNumpad({ pi: nextPi, field: "hands" }); }
+                  }}
+                  onGotBid={function() {
+                    var wasChecked = editingRound.entries[pi].gotBid;
+                    updateEdit(pi, "gotBid", !wasChecked);
+                    if (!wasChecked) {
+                      if (isLast) { setTimeout(focusSave, 0); }
+                      else { setEditActiveNumpad({ pi: nextPi, field: "hands" }); }
                     }
                   }}
                 />;
