@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { STYLES } from "./styles.js";
 import {
   apiFetch, calcScore, maxRoundsForPlayers, cardsForRound,
@@ -271,7 +271,7 @@ function PlayerPicker(props) {
   var [adding, setAdding] = useState(false);
   var [err, setErr] = useState(null);
   var [dupPrompt, setDupPrompt] = useState(null);
-  var searchRef = { current: null };
+  var searchRef = useRef(null);
 
   useEffect(function() { apiFetch("/players").then(setAllPlayers).catch(function() {}); }, []);
 
