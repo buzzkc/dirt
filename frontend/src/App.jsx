@@ -159,6 +159,7 @@ function PlayerEntryRow(props) {
           <div>
             <div className="player-name">
               {isLeader && <span className="leads-badge">Leads</span>}
+              {props.isDealer && <span className="dealer-badge">Dealer</span>}
               {name}
             </div>
             <div className="player-bid-info">{"Running: " + prevTotal + " pts" + (!isNaN(bid) ? " — Bid: " + bid : "")}</div>
@@ -370,7 +371,7 @@ function PlayerPicker(props) {
               onKeyDown={function(e) { if (e.key === "Enter") createAndAdd(); }} />
             <button className="btn btn-secondary btn-sm" onClick={createAndAdd} disabled={adding || !newName.trim() || !!dupPrompt}>{adding ? "..." : "Add"}</button>
           </div>
-          <div className="player-order-hint">Players are seated in the order selected above.</div>
+          <div className="player-order-hint">Please enter players in the order that they are seated, the last person is the dealer in the first round.</div>
         </>
       )}
     </div>
@@ -587,6 +588,7 @@ function ActiveGame(props) {
                 name={players[pi]}
                 prevTotal={totalUpTo(pi, roundEntry.roundIdx)}
                 isLeader={displayPos === 0}
+                isDealer={displayPos === n - 1}
                 activeField={isCurrent ? activeNumpad.field : null}
                 onOpenBid={function()   { setActiveNumpad({ pi: pi, field: "bid" }); }}
                 onOpenHands={function() { setActiveNumpad({ pi: pi, field: "hands" }); }}
@@ -658,6 +660,7 @@ function ActiveGame(props) {
                   numRounds={numRounds} roundIdx={editingRound.roundIdx}
                   onChange={updateEdit} name={players[pi]} prevTotal={totalUpTo(pi, editingRound.roundIdx)}
                   isLeader={displayPos === 0}
+                  isDealer={displayPos === n - 1}
                   activeField={isCurrent ? editActiveNumpad.field : null}
                   onOpenBid={function()   { setEditActiveNumpad({ pi: pi, field: "bid" }); }}
                   onOpenHands={function() { setEditActiveNumpad({ pi: pi, field: "hands" }); }}

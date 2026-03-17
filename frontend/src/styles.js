@@ -242,6 +242,12 @@ export const STYLES = `
   .player-entry-row.bid-met { border-color: var(--border-met); }
   .player-entry-row.round-leader { border-left: 3px solid var(--gold); }
   .player-name { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dealer-badge {
+    display: inline-block; font-size: 0.6rem; font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(122,173,138,0.12); border: 1px solid rgba(122,173,138,0.35);
+    color: var(--text-secondary); border-radius: 4px; padding: 1px 6px; font-weight: 400;
+  }
   .leads-badge {
     display: inline-block; font-size: 0.6rem; font-family: 'DM Mono', monospace;
     letter-spacing: 0.1em; text-transform: uppercase;
