@@ -127,11 +127,11 @@ export const STYLES = `
   }
   .theme-toggle:hover { border-color: var(--gold); }
   .page-back {
-    display: inline-block; margin-bottom: 16px; max-width: 560px; width: 100%;
+    display: block; margin: 0 auto 16px; max-width: 560px; width: 100%;
     background: transparent; border: 1px solid var(--border); border-radius: 8px;
     color: var(--text-secondary); font-size: 0.75rem; font-family: 'DM Mono', monospace;
     letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 14px; cursor: pointer; transition: all 0.15s;
-    display: block;
+    text-align: left;
   }
   .page-back:hover { border-color: var(--gold); color: var(--gold); }
 
