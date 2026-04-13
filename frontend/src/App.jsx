@@ -707,7 +707,8 @@ function SummaryPage(props) {
   var onReset = props.onReset; var onClone = props.onClone;
   var finalTotals = players.map(function(_, pi) { return rounds.reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); });
   var maxFinal = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
-  var winnerName = players[finalTotals.indexOf(maxFinal)] || "";
+  var winners = players.filter(function(_, i) { return finalTotals[i] === maxFinal; });
+  var isTie = winners.length > 1;
   var url = game.slug ? permalink("games", game.slug) : "";
   var smiles = rounds.filter(function(r) { return r.emoji === "happy"; }).length;
   var frowns  = rounds.filter(function(r) { return r.emoji === "sad";   }).length;
@@ -715,9 +716,10 @@ function SummaryPage(props) {
     <>
       {url && <PermalinkBar url={url} />}
       <div className="winner-banner">
-        <span className="trophy" role="img" aria-label="trophy">🏆</span>
-        <h2>{winnerName}</h2>
-        <p>{"Wins with " + maxFinal + " points!"}</p>
+        <span className="trophy" role="img" aria-label={isTie ? "tie" : "trophy"}>{isTie ? "🤝" : "🏆"}</span>
+        <h2>{isTie ? "It's a Tie!" : winners[0]}</h2>
+        {isTie && <p className="tie-names">{winners.join(" & ")}</p>}
+        <p>{(isTie ? "Tied" : "Wins") + " with " + maxFinal + " points!"}</p>
         <p style={{ fontSize:"0.8rem", marginTop:8 }}>{game.title + " — " + fmtDate(game.started_at)}</p>
         <EmojiStatsBar smiles={smiles} frowns={frowns} />
       </div>
@@ -749,15 +751,19 @@ function GameDetailPage(props) {
   var rounds   = (game.rounds || []).map(function(r) { return { roundIdx:r.round_index, entries:r.entries, scores:r.scores, emoji:r.emoji }; });
   var finalTotals = players.map(function(_, pi) { return rounds.reduce(function(s, r) { return s + (r.scores[pi] || 0); }, 0); });
   var maxFinal    = finalTotals.length > 0 ? Math.max.apply(null, finalTotals) : 0;
-  var winnerName  = players[finalTotals.indexOf(maxFinal)] || "";
+  var winners     = players.filter(function(_, i) { return finalTotals[i] === maxFinal; });
+  var isTie       = winners.length > 1;
   return (
     <>
       <button className="page-back" onClick={function() { navigate("/"); }}>Back to Home</button>
       <PermalinkBar url={permalink("games", props.slug)} />
       <div className="winner-banner" style={{ borderColor: game.status === "completed" ? "var(--winner-border)" : "var(--border)" }}>
-        <span className="trophy" role="img" aria-label={game.status === "completed" ? "trophy" : "cards"}>{game.status === "completed" ? "🏆" : "🃏"}</span>
-        <h2>{game.status === "completed" ? winnerName : game.title}</h2>
-        <p>{game.status === "completed" ? (winnerName + " wins with " + maxFinal + " pts!") : "In progress"}</p>
+        <span className="trophy" role="img" aria-label={game.status === "completed" ? (isTie ? "tie" : "trophy") : "cards"}>
+          {game.status === "completed" ? (isTie ? "🤝" : "🏆") : "🃏"}
+        </span>
+        <h2>{game.status === "completed" ? (isTie ? "It's a Tie!" : winners[0]) : game.title}</h2>
+        {game.status === "completed" && isTie && <p className="tie-names">{winners.join(" & ")}</p>}
+        <p>{game.status === "completed" ? ((isTie ? "Tied" : winners[0] + " wins") + " with " + maxFinal + " pts!") : "In progress"}</p>
         <p style={{ fontSize:"0.8rem", marginTop:8 }}>{fmtDate(game.started_at)}</p>
         <EmojiStatsBar smiles={game.smiles || 0} frowns={game.frowns || 0} />
       </div>

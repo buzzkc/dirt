@@ -308,6 +308,7 @@ export const STYLES = `
     border-radius: 20px; max-width: 560px; margin: 0 auto 24px;
   }
   .winner-banner .trophy { font-size: 3.5rem; display: block; margin-bottom: 12px; }
+  .tie-names { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gold); margin-top: 4px; font-weight: 700; }
   .winner-banner h2 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); }
   .winner-banner p { color: var(--text-secondary); margin-top: 6px; font-size: 0.9rem; }
 
